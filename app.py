@@ -20,7 +20,7 @@ def cargar_interfaz_dibujo():
     # En producción, guardarías tu HTML gigante en un archivo llamado 'visor.html'
     try:
         with open("visor.html", "r", encoding="utf-8") as f:
-            html_code = f.write()
+            html_code = f.read()
     except FileNotFoundError:
         # Placeholder por si no has creado el archivo 'visor.html' aún en tu repo
         html_code = "<h3>Por favor, guarda el código HTML en un archivo llamado 'visor.html' en tu repositorio.</h3>"
