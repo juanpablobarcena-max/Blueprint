@@ -1,17 +1,15 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
-# Configuración obligatoria a pantalla completa
 st.set_page_config(page_title="MidePlanos PRO", layout="wide", initial_sidebar_state="collapsed")
 
-# Todo el HTML unificado con el parche de seguridad para Streamlit Cloud
 codigo_html = """
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MidePlanos PRO</title>
+    <title>MidePlanos PRO - Cloud Ready</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script async src="https://docs.opencv.org/4.8.0/opencv.js" onload="onOpenCvReady()" type="text/javascript"></script>
@@ -25,14 +23,17 @@ codigo_html = """
             --bg-body: #0f172a; --bg-panel: rgba(30, 41, 59, 0.96); --border: #334155;
             --text-main: #f8fafc; --text-muted: #94a3b8;
         }
+
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
+        
         body { font-family: 'Inter', sans-serif; background-color: var(--bg-body); margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; color: var(--text-main); }
         .header { background: var(--bg-panel); backdrop-filter: blur(12px); padding: 6px 16px; border-bottom: 1px solid var(--border); z-index: 100; display: flex; flex-direction: column; gap: 6px; }
         .toolbar-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
         .toolbar-group { display: flex; gap: 8px; align-items: center; }
         .toolbar-group.tools-top { border-left: 1px solid var(--border); border-right: 1px solid var(--border); padding: 0 12px; }
+        
         button { border: none; cursor: pointer; font-family: inherit; outline: none; }
         button:not(.tool-btn) { padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-weight: 600; font-size: 11px; transition: 0.2s; background: #1e293b; color: var(--text-main); }
         button:not(.tool-btn):hover { background: #334155; border-color: #475569; }
@@ -41,9 +42,11 @@ codigo_html = """
         .tool-trigger.btn-success.active { background: var(--success); color: white; border-color: var(--success); }
         .tool-trigger.btn-magic { background: rgba(168, 85, 247, 0.1); color: #d8b4fe; border-color: rgba(168, 85, 247, 0.4); }
         .tool-trigger.btn-magic.active { background: var(--magic); color: white; border-color: var(--magic); }
+
         input[type="file"] { display: none; }
         .file-label { padding: 6px 10px; background: linear-gradient(180deg, #334155 0%, #1e293b 100%); color: white; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 11px; display: inline-block; border: 1px solid #475569; }
         .file-label:hover { background: #334155; }
+        
         .controls-bar { display: flex; justify-content: space-between; align-items: center; background: rgba(15, 23, 42, 0.4); padding: 4px 12px; border-radius: 6px; border: 1px solid var(--border); }
         .controls-left { display: flex; gap: 16px; align-items: center; }
         .pdf-controls { display: none; align-items: center; gap: 6px; border-right: 1px solid var(--border); padding-right: 12px; }
@@ -51,20 +54,24 @@ codigo_html = """
         .zoom-controls { display: flex; align-items: center; gap: 6px; }
         .zoom-controls span { font-weight: 600; color: var(--text-muted); font-size: 11px; text-transform: uppercase; }
         .zoom-btn { padding: 2px 8px !important; border-radius: 4px !important; font-size: 13px !important;}
+        
         .status-text { font-size: 12px; font-weight: 500; color: #fcd34d; background: rgba(245, 158, 11, 0.1); padding: 4px 10px; border-radius: 4px; border: 1px solid rgba(245, 158, 11, 0.2); }
         .scale-badge { font-size: 11px; font-weight: 700; color: #fca5a5; padding: 4px 8px; border-radius: 4px; background: rgba(239, 68, 68, 0.1); border: 1px dashed #ef4444; transition: 0.3s;}
         .scale-badge.calibrated { color: #6ee7b7; border-color: #10b981; background: rgba(16, 185, 129, 0.1); border-style: solid; }
+
         .left-toolbar { width: 54px; background: var(--bg-panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; padding: 10px 0; gap: 6px; z-index: 50; overflow: visible; }
         .tool-btn { width: 36px; height: 36px; flex-shrink: 0; border-radius: 8px; background: #1e293b; border: 1px solid var(--border); color: var(--text-main); display: flex; align-items: center; justify-content: center; font-size: 15px; transition: 0.2s; position: relative; padding: 0;}
         .tool-btn:hover { background: #334155; border-color: #475569;}
         .tool-btn::after { content: attr(data-tooltip); position: absolute; left: 100%; top: 50%; transform: translateY(-50%) translateX(5px); margin-left: 8px; background: #0f172a; color: #fff; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; white-space: nowrap; opacity: 0; visibility: hidden; transition: 0.2s; pointer-events: none; border: 1px solid var(--border); z-index: 9999; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
         .tool-btn::before { content: ""; position: absolute; left: 100%; top: 50%; transform: translateY(-50%) translateX(5px); margin-left: 2px; border-width: 5px; border-style: solid; border-color: transparent #0f172a transparent transparent; opacity: 0; visibility: hidden; transition: 0.2s; z-index: 9999; pointer-events: none; }
         .tool-btn:hover::after, .tool-btn:hover::before { opacity: 1; visibility: visible; transform: translateY(-50%) translateX(0); }
+
         .main-container { display: flex; flex: 1; overflow: hidden; }
         .workspace { flex: 1; display: flex; flex-direction: column; padding: 20px; overflow: hidden; background-color: var(--bg-body); background-image: radial-gradient(#334155 1.5px, transparent 1.5px); background-size: 24px 24px; z-index: 1;}
         .canvas-container { flex: 1; overflow: auto; background: white; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); position: relative; border: 1px solid #000; }
         canvas { display: block; transform-origin: top left; transition: width 0.1s, height 0.1s; }
         #loupeCanvas { position: fixed; pointer-events: none; border-radius: 50%; border: 2px solid #0ea5e9; box-shadow: 0 5px 15px rgba(0,0,0,0.6); display: none; z-index: 9999; background: white; }
+
         .resizer { width: 5px; background: var(--bg-body); cursor: ew-resize; transition: 0.2s; z-index: 20; border-left: 1px solid var(--border); }
         .resizer:hover, .resizer.resizing { background: #0ea5e9; }
         .sidebar { width: 340px; background: var(--bg-panel); display: flex; flex-direction: column; z-index: 5; }
@@ -72,8 +79,9 @@ codigo_html = """
         .sidebar-header h3 { margin: 0; font-size: 13px; font-weight: 700; display: flex; justify-content: space-between; }
         .measurement-list { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
         .empty-state { text-align: center; color: var(--text-muted); font-size: 12px; margin-top: 20px; }
+        
         .measure-item { border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; background: #1e293b; display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 8px; border-left: 4px solid var(--primary); transition: 0.2s; cursor: pointer; }
-        .measure-item:hover { background: #334155; border-color: #64748b; transform: translateX(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .measure-item:hover, .measure-item.highlighted { background: #334155; border-color: #64748b; transform: translateX(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
         .measure-item.selected { background: #1e293b; border-color: #0ea5e9; box-shadow: inset 0 0 0 1px #0ea5e9; }
         .color-picker { -webkit-appearance: none; border: none; width: 16px; height: 16px; border-radius: 4px; cursor: pointer; padding: 0; background: transparent; flex-shrink: 0;}
         .color-picker::-webkit-color-swatch-wrapper { padding: 0; }
@@ -86,33 +94,9 @@ codigo_html = """
         .btn-delete:hover { color: #fca5a5 !important; background: #7f1d1d !important; }
         .sidebar-footer { padding: 16px; border-top: 1px solid var(--border); background: rgba(15, 23, 42, 0.4); }
         .btn-export { width: 100%; background: linear-gradient(180deg, #10b981 0%, #059669 100%) !important; color: white !important; border-color: #059669 !important; padding: 10px !important; font-size: 13px; border-radius: 6px;}
-
-        /* MODAL CUSTOM (Soluciona bloqueos de la nube) */
-        #customModal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15,23,42,0.8); z-index: 99999; display: none; justify-content: center; align-items: center; backdrop-filter: blur(4px); }
-        .modal-content { background: #1e293b; padding: 24px; border-radius: 12px; border: 1px solid #334155; color: white; width: 320px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
-        .modal-content h3 { margin-top: 0; font-size: 15px; font-weight: 600; color: #f8fafc; }
-        .modal-content input { width: 100%; box-sizing: border-box; padding: 10px; margin: 15px 0; background: #0f172a; border: 1px solid #0ea5e9; color: white; border-radius: 6px; outline: none; display: none; font-size: 14px; text-align: center; }
-        .modal-buttons { display: flex; justify-content: center; gap: 12px; margin-top: 20px; }
-        .modal-buttons button { padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; transition: 0.2s; }
-        .modal-cancel { background: #334155; color: #f8fafc; display: none; }
-        .modal-cancel:hover { background: #475569; }
-        .modal-ok { background: #0ea5e9; color: white; }
-        .modal-ok:hover { background: #0284c7; }
     </style>
 </head>
 <body>
-    <!-- Ventanas Emergentes Personalizadas -->
-    <div id="customModal">
-        <div class="modal-content">
-            <h3 id="modalTitle"></h3>
-            <input type="text" id="modalInput" onkeyup="if(event.key === 'Enter') document.getElementById('modalBtnOk').click();" autocomplete="off">
-            <div class="modal-buttons">
-                <button id="modalBtnCancel" class="modal-cancel">Cancelar</button>
-                <button id="modalBtnOk" class="modal-ok">Aceptar</button>
-            </div>
-        </div>
-    </div>
-
     <canvas id="loupeCanvas" width="120" height="120"></canvas>
 
     <div class="header">
@@ -126,6 +110,7 @@ codigo_html = """
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-dasharray="5 5"><rect x="2" y="2" width="20" height="20" rx="2"/></svg> Área
                 </button>
             </div>
+            
             <div class="toolbar-group tools-top">
                 <button data-mode="select" class="tool-trigger">↖️ Seleccionar</button>
                 <button data-mode="calibrate" class="tool-trigger">📏 Calibrar</button>
@@ -174,14 +159,8 @@ codigo_html = """
     </div>
 
     <script>
-        // SOLUCIÓN AL BLOQUEO DE SEGURIDAD (CORS) EN STREAMLIT CLOUD
-        try {
-            const pdfWorkerUrl = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
-            const blob = new Blob([`importScripts('${pdfWorkerUrl}');`], { type: 'text/javascript' });
-            pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(blob);
-        } catch (e) {
-            console.warn("Usando motor PDF en modo seguro.");
-        }
+        // EL MOTOR DE PDF.JS ORIGINAL (Sin trucos, funciona 100%)
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
         let cvReady = false;
         function onOpenCvReady() {
@@ -192,27 +171,11 @@ codigo_html = """
             document.getElementById('statusText').style.borderColor = 'rgba(16, 185, 129, 0.2)';
         }
 
-        function cAlert(msg, callback) {
-            const m = document.getElementById('customModal'); m.style.display = 'flex';
-            document.getElementById('modalTitle').innerText = msg;
-            document.getElementById('modalInput').style.display = 'none';
-            document.getElementById('modalBtnCancel').style.display = 'none';
-            document.getElementById('modalBtnOk').onclick = () => { m.style.display = 'none'; if(callback) callback(); };
-        }
-        function cPrompt(msg, callback) {
-            const m = document.getElementById('customModal'); m.style.display = 'flex';
-            document.getElementById('modalTitle').innerText = msg;
-            const inp = document.getElementById('modalInput'); inp.style.display = 'block'; inp.value = ''; 
-            setTimeout(() => inp.focus(), 50);
-            document.getElementById('modalBtnCancel').style.display = 'block';
-            document.getElementById('modalBtnCancel').onclick = () => { m.style.display = 'none'; callback(null); };
-            document.getElementById('modalBtnOk').onclick = () => { m.style.display = 'none'; callback(inp.value); };
-        }
-
         const canvas = document.getElementById('planCanvas');
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
         const canvasContainer = document.getElementById('canvasContainer');
         const imageLoader = document.getElementById('imageLoader');
+        const projectLoader = document.getElementById('projectLoader');
         const measurementListEl = document.getElementById('measurementList');
         const pageInput = document.getElementById('pageInput');
         const loupeCanvas = document.getElementById('loupeCanvas');
@@ -221,7 +184,7 @@ codigo_html = """
         const rightSidebar = document.getElementById('rightSidebar');
         
         let img = new Image(); let mode = 'none'; let currentZoom = 1; let measurementsByPage = {}; let counters = { line: 1, area: 1, circle: 1, arc: 1, dimension: 1 };
-        let scaleByPage = {}; let currentFileDataURL = null; let currentFileType = null; let currentFileName = null; let pdfDoc = null; let pageNum = 1; 
+        let scaleByPage = {}; let lastKnownScale = 0; let currentFileDataURL = null; let currentFileType = null; let currentFileName = null; let pdfDoc = null; let pageNum = 1; 
         let isDrawing = false; let startX, startY, endX, endY; let currentPath = []; let tempPoint = null; let measureStep = 0; 
         let isPanning = false; let panStartX, panStartY, panScrollLeft, panScrollTop; let draggingLabel = null; let dragOffsetX = 0, dragOffsetY = 0;
         let editingMeasureId = null; let draggingPointIndex = -1; let highlightedMeasureId = null; let isResizing = false;
@@ -255,7 +218,7 @@ codigo_html = """
         document.addEventListener('mouseup', () => { if (isResizing) { isResizing = false; document.body.style.cursor = 'default'; resizer.classList.remove('resizing'); } });
         document.getElementById('btnToggleSidebar').onclick = () => { if (rightSidebar.style.display === 'none') { rightSidebar.style.display = 'flex'; resizer.style.display = 'block'; } else { rightSidebar.style.display = 'none'; resizer.style.display = 'none'; } };
 
-        document.getElementById('btnPrint').onclick = () => { if (!img.src) return cAlert("Sube un plano primero."); openPrintWindow(canvas.toDataURL('image/png')); };
+        document.getElementById('btnPrint').onclick = () => { if (!img.src) return alert("Sube un plano primero."); openPrintWindow(canvas.toDataURL('image/png')); };
         function printSelectedArea(x, y, w, h) { const tCanvas = document.createElement('canvas'); tCanvas.width = w; tCanvas.height = h; const tCtx = tCanvas.getContext('2d'); tCtx.drawImage(canvas, x, y, w, h, 0, 0, w, h); openPrintWindow(tCanvas.toDataURL('image/png')); }
         function openPrintWindow(dataUrl) { const printWindow = window.open('', '_blank'); printWindow.document.write(`<html><head><title>Imprimir</title><style>@page{size:auto;margin:0mm;}body{margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#fff;}img{max-width:100vw;max-height:100vh;object-fit:contain;}</style></head><body><img src="${dataUrl}" onload="setTimeout(()=>{window.print();window.close();},250);" /></body></html>`); printWindow.document.close(); }
 
@@ -277,7 +240,7 @@ codigo_html = """
             if (currentFileType === 'application/pdf') {
                 const base64Index = currentFileDataURL.indexOf(';base64,') + 8; const rawBase64 = currentFileDataURL.substring(base64Index); const raw = window.atob(rawBase64); const array = new Uint8Array(raw.length);
                 for(let i=0; i<raw.length; i++) array[i] = raw.charCodeAt(i);
-                pdfjsLib.getDocument(array).promise.then(function(pdf) { pdfDoc = pdf; document.getElementById('pdfControls').style.display = 'flex'; document.getElementById('pageTotal').textContent = pdfDoc.numPages; pageInput.max = pdfDoc.numPages; renderPage(pageNum, isNew); }).catch(err => { cAlert("Error al abrir PDF."); console.error(err); });
+                pdfjsLib.getDocument(array).promise.then(function(pdf) { pdfDoc = pdf; document.getElementById('pdfControls').style.display = 'flex'; document.getElementById('pageTotal').textContent = pdfDoc.numPages; pageInput.max = pdfDoc.numPages; renderPage(pageNum, isNew); }).catch(err => { alert("Error al abrir PDF."); console.error(err); });
             } else { document.getElementById('pdfControls').style.display = 'none'; pdfDoc = null; document.getElementById('sbPageTitle').textContent = `(Imagen)`; img.onload = function() { resetCanvasEnvironment(isNew); }; img.src = currentFileDataURL; }
         }
 
@@ -292,6 +255,7 @@ codigo_html = """
             canvas.width = img.width; canvas.height = img.height; editingMeasureId = null; draggingPointIndex = -1;
             if (isNewDocument) { const cw = canvasContainer.clientWidth - 40; const ch = canvasContainer.clientHeight - 40; if (cw > 0 && ch > 0 && img.width > 0 && img.height > 0) { currentZoom = Math.min(cw / img.width, ch / img.height) * 0.95; currentZoom = Math.max(0.05, Math.min(currentZoom, 5)); } else currentZoom = 1; setTimeout(() => { canvasContainer.scrollLeft = 0; canvasContainer.scrollTop = 0; }, 10); } 
             applyZoom(); updateSidebar(); redraw();
+            if (!scaleByPage[pageNum] && lastKnownScale > 0) scaleByPage[pageNum] = lastKnownScale;
             const currentScale = scaleByPage[pageNum]; const txt = document.getElementById('statusText');
             if (currentScale > 0) { txt.innerText = `Plano listo. Puedes medir.`; document.getElementById('scaleInfo').innerText = `ESC. PÁG. ${pageNum} (1m = ${Math.round(currentScale)}px)`; document.getElementById('scaleInfo').className = "scale-badge calibrated"; if(mode === 'none' || mode === 'calibrate') setMode('select'); } 
             else { txt.innerText = "Calibra la escala para esta página."; document.getElementById('scaleInfo').innerText = "ESCALA NO CALIBRADA"; document.getElementById('scaleInfo').className = "scale-badge"; setMode('none'); }
@@ -299,7 +263,7 @@ codigo_html = """
 
         imageLoader.addEventListener('change', function(e) {
             const file = e.target.files[0]; if (!file) return;
-            currentFileType = file.type; currentFileName = file.name; measurementsByPage = {}; counters = { line: 1, area: 1, circle: 1, arc: 1, dimension: 1 }; pageNum = 1; scaleByPage = {}; document.getElementById('statusText').innerText = "Cargando plano...";
+            currentFileType = file.type; currentFileName = file.name; measurementsByPage = {}; counters = { line: 1, area: 1, circle: 1, arc: 1, dimension: 1 }; pageNum = 1; scaleByPage = {}; lastKnownScale = 0; document.getElementById('statusText').innerText = "Cargando plano...";
             const reader = new FileReader(); reader.onload = function(event) { currentFileDataURL = event.target.result; loadDocumentFromDataURL(true); }; reader.readAsDataURL(file); e.target.value = ""; 
         });
 
@@ -307,11 +271,36 @@ codigo_html = """
         document.getElementById('btnNext').onclick = () => { if (pageNum < pdfDoc.numPages) { pageNum++; renderPage(pageNum, false); }};
         pageInput.addEventListener('change', (e) => { if (!pdfDoc) return; let val = parseInt(e.target.value); if (isNaN(val) || val < 1) val = 1; if (val > pdfDoc.numPages) val = pdfDoc.numPages; if (val !== pageNum) { pageNum = val; renderPage(pageNum, false); } else pageInput.value = pageNum; });
 
+        document.getElementById('btnSave').onclick = async () => {
+            if (!currentFileDataURL) return alert("No hay proyecto activo para guardar.");
+            const saveData = { fileData: currentFileDataURL, fileType: currentFileType, fileName: currentFileName, scaleByPage: scaleByPage, lastKnownScale: lastKnownScale, counters: counters, measurementsByPage: {} };
+            for (let page in measurementsByPage) { saveData.measurementsByPage[page] = measurementsByPage[page].map(m => { let clone = { ...m }; if (clone.img) { clone.imgSrc = clone.img.src; delete clone.img; } return clone; }); }
+            const jsonString = JSON.stringify(saveData); const suggestedName = `Proyecto_${currentFileName ? currentFileName.split('.')[0] : 'MidePlanos'}.json`;
+            if (window.showSaveFilePicker) { try { const handle = await window.showSaveFilePicker({ suggestedName: suggestedName, types: [{ description: 'Archivo MidePlanos', accept: {'application/json': ['.json']} }] }); const writable = await handle.createWritable(); await writable.write(jsonString); await writable.close(); } catch (err) { if (err.name !== 'AbortError') fallbackSave(jsonString, suggestedName); } } 
+            else fallbackSave(jsonString, suggestedName);
+        };
+        function fallbackSave(jsonString, fileName) { const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(jsonString); const link = document.createElement("a"); link.href = dataStr; link.download = fileName; document.body.appendChild(link); link.click(); document.body.removeChild(link); }
+
+        projectLoader.addEventListener('change', function(e) {
+            const file = e.target.files[0]; if (!file) return; const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    const json = JSON.parse(event.target.result); currentFileDataURL = json.fileData; currentFileType = json.fileType; currentFileName = json.fileName; scaleByPage = json.scaleByPage || {}; lastKnownScale = json.lastKnownScale || 0; counters = json.counters || { line: 1, area: 1, circle: 1, arc: 1, dimension: 1 };
+                    if (json.pixelsPerMeter && Object.keys(scaleByPage).length === 0) { scaleByPage[1] = json.pixelsPerMeter; lastKnownScale = json.pixelsPerMeter; }
+                    measurementsByPage = {}; const promises = [];
+                    for (let page in json.measurementsByPage) {
+                        measurementsByPage[page] = [];
+                        json.measurementsByPage[page].forEach(m => { if ((m.type === 'autoArea' || m.type === 'autoLine') && m.imgSrc) { const prom = new Promise((resolve) => { const newImg = new Image(); newImg.onload = () => { m.img = newImg; measurementsByPage[page].push(m); resolve(); }; newImg.src = m.imgSrc; }); promises.push(prom); } else measurementsByPage[page].push(m); });
+                    } Promise.all(promises).then(() => { pageNum = 1; loadDocumentFromDataURL(true); }); 
+                } catch(err) { alert("Error al leer archivo."); }
+            }; reader.readAsText(file); e.target.value = "";
+        });
+
         document.querySelectorAll('.tool-trigger').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const selectedMode = e.currentTarget.getAttribute('data-mode');
-                if (['distance', 'dimension', 'polygonal', 'area', 'circle', 'arc', 'autoLine', 'autoArea'].includes(selectedMode)) { if (!scaleByPage[pageNum]) { cAlert("¡Calibra la escala primero!"); return; } } 
-                if (['autoLine', 'autoArea'].includes(selectedMode) && !cvReady) { cAlert("El motor OpenCV aún se está cargando. Espera unos segundos."); return; }
+                if (['distance', 'dimension', 'polygonal', 'area', 'circle', 'arc', 'autoLine', 'autoArea'].includes(selectedMode)) { if (!scaleByPage[pageNum]) { alert("¡Calibra la escala primero!"); return; } } 
+                if (['autoLine', 'autoArea'].includes(selectedMode) && !cvReady) { alert("El motor OpenCV aún se está cargando. Espera unos segundos."); return; }
                 setMode(selectedMode);
             });
         });
@@ -362,13 +351,14 @@ codigo_html = """
         }
         
         document.getElementById('btnExport').onclick = () => {
-            const list = measurementsByPage[pageNum] || []; if (list.length === 0) return cAlert("No hay datos que exportar.");
+            const list = measurementsByPage[pageNum] || []; if (list.length === 0) return alert("No hay datos que exportar.");
             let csv = "\uFEFFHoja;Nombre;Tipo;Longitud/Perímetro (m);Área (m²);Radio (m)\n"; let pageLabel = pdfDoc ? `Página ${pageNum}` : "Imagen Única"; const typeTranslations = { 'straight': 'Línea Recta', 'dimension': 'Acotación CAD', 'polygonal': 'Línea Poligonal', 'area': 'Área Manual', 'circle': 'Círculo', 'arc': 'Arco', 'autoLine': 'Auto-Línea', 'autoArea': 'Auto-Área' };
             list.forEach(m => { let tipo = typeTranslations[m.type] || m.type; let longitud = (m.valM && m.valM !== "N/A") ? m.valM.toString().replace('.',',') : "-"; let area = m.valM2 ? m.valM2.toString().replace('.',',') : "-"; let radio = m.radiusM ? m.radiusM.toString().replace('.',',') : "-"; csv += `${pageLabel};"${m.name}";${tipo};${longitud};${area};${radio}\n`; });
             const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' })); link.download = `Mediciones_${pageLabel.replace(' ', '_')}.csv`; document.body.appendChild(link); link.click(); document.body.removeChild(link);
         };
 
         function executeAutoMeasurement(startX, startY, autoMode) {
+            document.getElementById('statusText').innerText = "🧠 Procesando topología y sombreados con OpenCV...";
             setTimeout(() => {
                 try {
                     let src = cv.imread(canvas); let ctxData = ctx.getImageData(startX, startY, 1, 1).data; let r = ctxData[0], g = ctxData[1], b = ctxData[2];
@@ -393,8 +383,8 @@ codigo_html = """
                         let M = cv.moments(maxCnt); let cx = M.m10 / M.m00, cy = M.m01 / M.m00; let tempCanvas = document.createElement('canvas'); cv.imshow(tempCanvas, overlay); let resImg = new Image(); resImg.onload = () => { addMeasurement({ type: 'autoLine', img: resImg, cx, cy, valM: (maxLen / (scaleByPage[pageNum] || 1)).toFixed(2), valM2: null }); }; resImg.src = tempCanvas.toDataURL();
                         contours.delete(); hierarchy.delete(); drawCnts.delete(); overlay.delete();
                     }
-                    src.delete(); low.delete(); high.delete(); mask.delete(); setMode('select');
-                } catch(err) { cAlert("No se detectó un patrón. Haz clic en una zona definida."); setMode('select'); }
+                    src.delete(); low.delete(); high.delete(); mask.delete(); document.getElementById('statusText').innerText = "✅ Operación completada."; setMode('select');
+                } catch(err) { alert("No se pudo detectar el patrón. Haz clic en una zona definida."); setMode('select'); }
             }, 50); 
         }
 
@@ -453,10 +443,9 @@ codigo_html = """
         function finishLineTool() {
             isDrawing = false; measureStep = 0; const dist = Math.hypot(endX - startX, endY - startY); if (dist < 5) { currentPath = []; redraw(); return; }
             if (mode === 'calibrate') {
-                cPrompt("¿Cuántos metros reales tiene esta línea?", (r) => {
-                    if (r) { r = parseFloat(r.replace(',', '.')); if (!isNaN(r) && r > 0) { scaleByPage[pageNum] = dist / r; document.getElementById('scaleInfo').innerText = `ESC. PÁG. ${pageNum} (1m = ${Math.round(scaleByPage[pageNum])}px)`; document.getElementById('scaleInfo').className = "scale-badge calibrated"; cAlert(`¡Escala guardada!`); setMode('distance'); } else { cAlert("Valor no válido."); } }
-                    currentPath = []; redraw();
-                });
+                let r = prompt("¿Cuántos metros reales tiene esta línea?");
+                if (r) { r = parseFloat(r.replace(',', '.')); if (!isNaN(r) && r > 0) { scaleByPage[pageNum] = dist / r; lastKnownScale = scaleByPage[pageNum]; document.getElementById('scaleInfo').innerText = `ESC. PÁG. ${pageNum} (1m = ${Math.round(scaleByPage[pageNum])}px)`; document.getElementById('scaleInfo').className = "scale-badge calibrated"; alert(`¡Escala guardada!`); setMode('distance'); } else { alert("Valor no válido."); } }
+                currentPath = []; redraw();
             } else if (mode === 'distance') { addMeasurement({ type: 'straight', cx: (startX+endX)/2, cy: (startY+endY)/2, points: [...currentPath], valM: (dist/scaleByPage[pageNum]).toFixed(2), valM2: null }); currentPath = []; redraw(); } 
         }
 
@@ -485,9 +474,7 @@ codigo_html = """
         
         function redraw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height); if (img.src) ctx.drawImage(img, 0, 0);
-            const list = measurementsByPage[pageNum] || [];
-            const sortedList = [...list.filter(m => m.id !== highlightedMeasureId), ...list.filter(m => m.id === highlightedMeasureId)];
-
+            const list = measurementsByPage[pageNum] || []; const sortedList = [...list.filter(m => m.id !== highlightedMeasureId), ...list.filter(m => m.id === highlightedMeasureId)];
             sortedList.forEach(m => {
                 const isHigh = (m.id === highlightedMeasureId); const col = m.color;
                 if (m.type === 'autoArea' || m.type === 'autoLine') { const tCanv = document.createElement('canvas'); tCanv.width = canvas.width; tCanv.height = canvas.height; const tc = tCanv.getContext('2d'); tc.drawImage(m.img, 0, 0); tc.globalCompositeOperation = 'source-in'; tc.fillStyle = col; tc.fillRect(0, 0, canvas.width, canvas.height); if (isHigh) { ctx.shadowColor = col; ctx.shadowBlur = 12; } ctx.drawImage(tCanv, 0, 0); ctx.shadowBlur = 0; }
@@ -498,7 +485,6 @@ codigo_html = """
                 else if (m.type === 'circle') drawCircleData(m.cx, m.cy, m.r, col, isHigh);
                 else if (m.type === 'arc') drawArcData(m.points, col, isHigh);
             });
-
             if (isDrawing && currentPath.length > 0) {
                 if (['calibrate', 'distance'].includes(mode) && tempPoint) { drawLine(currentPath[0].x, currentPath[0].y, tempPoint.x, tempPoint.y, mode==='calibrate'?'#ef4444':'#0ea5e9', false); }
                 else if (['arc', 'circle', 'dimension'].includes(mode)) {
@@ -514,7 +500,6 @@ codigo_html = """
                 }
                 else if (['polygonal', 'area'].includes(mode)) { ctx.beginPath(); ctx.moveTo(currentPath[0].x, currentPath[0].y); for (let i = 1; i < currentPath.length; i++) ctx.lineTo(currentPath[i].x, currentPath[i].y); if (tempPoint) ctx.lineTo(tempPoint.x, tempPoint.y); if (mode === 'area' && currentPath.length > 2 && tempPoint == null) ctx.closePath(); const dC = mode === 'area' ? '#10b981' : '#f59e0b'; ctx.strokeStyle = dC; ctx.lineWidth = 2; ctx.setLineDash([6, 6]); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = dC; currentPath.forEach(p => { ctx.beginPath(); ctx.arc(p.x, p.y, 2.5, 0, Math.PI*2); ctx.fill(); }); }
             }
-
             sortedList.forEach(m => {
                 const isHigh = (m.id === highlightedMeasureId);
                 if (m.cx === undefined) { if (m.type === 'straight') { m.cx = (m.points[0].x + m.points[1].x)/2; m.cy = (m.points[0].y + m.points[1].y)/2; } else if (m.type === 'area') { let cx=0,cy=0; m.points.forEach(p=>{cx+=p.x;cy+=p.y;}); m.cx=cx/m.points.length; m.cy=cy/m.points.length; } else if (m.type === 'polygonal') { m.cx = m.points[m.points.length-1].x; m.cy = m.points[m.points.length-1].y; } }
