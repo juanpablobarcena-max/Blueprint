@@ -3,7 +3,8 @@ import streamlit.components.v1 as components
 
 st.set_page_config(page_title="MidePlanos PRO", layout="wide", initial_sidebar_state="collapsed")
 
-codigo_html = """
+# La 'r' antes de las comillas salva el código de corromperse (Raw String)
+codigo_html = r"""
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -94,9 +95,33 @@ codigo_html = """
         .btn-delete:hover { color: #fca5a5 !important; background: #7f1d1d !important; }
         .sidebar-footer { padding: 16px; border-top: 1px solid var(--border); background: rgba(15, 23, 42, 0.4); }
         .btn-export { width: 100%; background: linear-gradient(180deg, #10b981 0%, #059669 100%) !important; color: white !important; border-color: #059669 !important; padding: 10px !important; font-size: 13px; border-radius: 6px;}
+
+        /* MODAL CUSTOM PARA STREAMLIT CLOUD (Bypass de seguridad) */
+        #customModal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15,23,42,0.8); z-index: 99999; display: none; justify-content: center; align-items: center; backdrop-filter: blur(4px); }
+        .modal-content { background: #1e293b; padding: 24px; border-radius: 12px; border: 1px solid #334155; color: white; width: 320px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        .modal-content h3 { margin-top: 0; font-size: 15px; font-weight: 600; color: #f8fafc; }
+        .modal-content input { width: 100%; box-sizing: border-box; padding: 10px; margin: 15px 0; background: #0f172a; border: 1px solid #0ea5e9; color: white; border-radius: 6px; outline: none; display: none; font-size: 14px; text-align: center; }
+        .modal-buttons { display: flex; justify-content: center; gap: 12px; margin-top: 20px; }
+        .modal-buttons button { padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; transition: 0.2s; }
+        .modal-cancel { background: #334155; color: #f8fafc; display: none; }
+        .modal-cancel:hover { background: #475569; }
+        .modal-ok { background: #0ea5e9; color: white; }
+        .modal-ok:hover { background: #0284c7; }
     </style>
 </head>
 <body>
+    <!-- Ventanas Emergentes Integradas -->
+    <div id="customModal">
+        <div class="modal-content">
+            <h3 id="modalTitle"></h3>
+            <input type="text" id="modalInput" onkeyup="if(event.key === 'Enter') document.getElementById('modalBtnOk').click();" autocomplete="off">
+            <div class="modal-buttons">
+                <button id="modalBtnCancel" class="modal-cancel">Cancelar</button>
+                <button id="modalBtnOk" class="modal-ok">Aceptar</button>
+            </div>
+        </div>
+    </div>
+
     <canvas id="loupeCanvas" width="120" height="120"></canvas>
 
     <div class="header">
@@ -159,7 +184,6 @@ codigo_html = """
     </div>
 
     <script>
-        // EL MOTOR DE PDF.JS ORIGINAL (Sin trucos, funciona 100%)
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
         let cvReady = false;
@@ -169,6 +193,31 @@ codigo_html = """
             document.getElementById('statusText').style.color = '#6ee7b7';
             document.getElementById('statusText').style.backgroundColor = 'rgba(16, 185, 129, 0.1)';
             document.getElementById('statusText').style.borderColor = 'rgba(16, 185, 129, 0.2)';
+        }
+
+        function cAlert(msg, callback) {
+            const m = document.getElementById('customModal'); m.style.display = 'flex';
+            document.getElementById('modalTitle').innerText = msg;
+            document.getElementById('modalInput').style.display = 'none';
+            document.getElementById('modalBtnCancel').style.display = 'none';
+            document.getElementById('modalBtnOk').onclick = () => { m.style.display = 'none'; if(callback) callback(); };
+        }
+        function cPrompt(msg, callback) {
+            const m = document.getElementById('customModal'); m.style.display = 'flex';
+            document.getElementById('modalTitle').innerText = msg;
+            const inp = document.getElementById('modalInput'); inp.style.display = 'block'; inp.value = ''; 
+            setTimeout(() => inp.focus(), 50);
+            document.getElementById('modalBtnCancel').style.display = 'block';
+            document.getElementById('modalBtnCancel').onclick = () => { m.style.display = 'none'; callback(null); };
+            document.getElementById('modalBtnOk').onclick = () => { m.style.display = 'none'; callback(inp.value); };
+        }
+        function cConfirm(msg, callback) {
+            const m = document.getElementById('customModal'); m.style.display = 'flex';
+            document.getElementById('modalTitle').innerText = msg;
+            document.getElementById('modalInput').style.display = 'none';
+            document.getElementById('modalBtnCancel').style.display = 'block';
+            document.getElementById('modalBtnCancel').onclick = () => { m.style.display = 'none'; callback(false); };
+            document.getElementById('modalBtnOk').onclick = () => { m.style.display = 'none'; callback(true); };
         }
 
         const canvas = document.getElementById('planCanvas');
@@ -218,7 +267,7 @@ codigo_html = """
         document.addEventListener('mouseup', () => { if (isResizing) { isResizing = false; document.body.style.cursor = 'default'; resizer.classList.remove('resizing'); } });
         document.getElementById('btnToggleSidebar').onclick = () => { if (rightSidebar.style.display === 'none') { rightSidebar.style.display = 'flex'; resizer.style.display = 'block'; } else { rightSidebar.style.display = 'none'; resizer.style.display = 'none'; } };
 
-        document.getElementById('btnPrint').onclick = () => { if (!img.src) return alert("Sube un plano primero."); openPrintWindow(canvas.toDataURL('image/png')); };
+        document.getElementById('btnPrint').onclick = () => { if (!img.src) return cAlert("Sube un plano primero."); openPrintWindow(canvas.toDataURL('image/png')); };
         function printSelectedArea(x, y, w, h) { const tCanvas = document.createElement('canvas'); tCanvas.width = w; tCanvas.height = h; const tCtx = tCanvas.getContext('2d'); tCtx.drawImage(canvas, x, y, w, h, 0, 0, w, h); openPrintWindow(tCanvas.toDataURL('image/png')); }
         function openPrintWindow(dataUrl) { const printWindow = window.open('', '_blank'); printWindow.document.write(`<html><head><title>Imprimir</title><style>@page{size:auto;margin:0mm;}body{margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#fff;}img{max-width:100vw;max-height:100vh;object-fit:contain;}</style></head><body><img src="${dataUrl}" onload="setTimeout(()=>{window.print();window.close();},250);" /></body></html>`); printWindow.document.close(); }
 
@@ -240,7 +289,7 @@ codigo_html = """
             if (currentFileType === 'application/pdf') {
                 const base64Index = currentFileDataURL.indexOf(';base64,') + 8; const rawBase64 = currentFileDataURL.substring(base64Index); const raw = window.atob(rawBase64); const array = new Uint8Array(raw.length);
                 for(let i=0; i<raw.length; i++) array[i] = raw.charCodeAt(i);
-                pdfjsLib.getDocument(array).promise.then(function(pdf) { pdfDoc = pdf; document.getElementById('pdfControls').style.display = 'flex'; document.getElementById('pageTotal').textContent = pdfDoc.numPages; pageInput.max = pdfDoc.numPages; renderPage(pageNum, isNew); }).catch(err => { alert("Error al abrir PDF."); console.error(err); });
+                pdfjsLib.getDocument(array).promise.then(function(pdf) { pdfDoc = pdf; document.getElementById('pdfControls').style.display = 'flex'; document.getElementById('pageTotal').textContent = pdfDoc.numPages; pageInput.max = pdfDoc.numPages; renderPage(pageNum, isNew); }).catch(err => { cAlert("Error al abrir PDF."); console.error(err); });
             } else { document.getElementById('pdfControls').style.display = 'none'; pdfDoc = null; document.getElementById('sbPageTitle').textContent = `(Imagen)`; img.onload = function() { resetCanvasEnvironment(isNew); }; img.src = currentFileDataURL; }
         }
 
@@ -272,7 +321,7 @@ codigo_html = """
         pageInput.addEventListener('change', (e) => { if (!pdfDoc) return; let val = parseInt(e.target.value); if (isNaN(val) || val < 1) val = 1; if (val > pdfDoc.numPages) val = pdfDoc.numPages; if (val !== pageNum) { pageNum = val; renderPage(pageNum, false); } else pageInput.value = pageNum; });
 
         document.getElementById('btnSave').onclick = async () => {
-            if (!currentFileDataURL) return alert("No hay proyecto activo para guardar.");
+            if (!currentFileDataURL) return cAlert("No hay proyecto activo para guardar.");
             const saveData = { fileData: currentFileDataURL, fileType: currentFileType, fileName: currentFileName, scaleByPage: scaleByPage, lastKnownScale: lastKnownScale, counters: counters, measurementsByPage: {} };
             for (let page in measurementsByPage) { saveData.measurementsByPage[page] = measurementsByPage[page].map(m => { let clone = { ...m }; if (clone.img) { clone.imgSrc = clone.img.src; delete clone.img; } return clone; }); }
             const jsonString = JSON.stringify(saveData); const suggestedName = `Proyecto_${currentFileName ? currentFileName.split('.')[0] : 'MidePlanos'}.json`;
@@ -292,15 +341,15 @@ codigo_html = """
                         measurementsByPage[page] = [];
                         json.measurementsByPage[page].forEach(m => { if ((m.type === 'autoArea' || m.type === 'autoLine') && m.imgSrc) { const prom = new Promise((resolve) => { const newImg = new Image(); newImg.onload = () => { m.img = newImg; measurementsByPage[page].push(m); resolve(); }; newImg.src = m.imgSrc; }); promises.push(prom); } else measurementsByPage[page].push(m); });
                     } Promise.all(promises).then(() => { pageNum = 1; loadDocumentFromDataURL(true); }); 
-                } catch(err) { alert("Error al leer archivo."); }
+                } catch(err) { cAlert("Error al leer archivo."); }
             }; reader.readAsText(file); e.target.value = "";
         });
 
         document.querySelectorAll('.tool-trigger').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const selectedMode = e.currentTarget.getAttribute('data-mode');
-                if (['distance', 'dimension', 'polygonal', 'area', 'circle', 'arc', 'autoLine', 'autoArea'].includes(selectedMode)) { if (!scaleByPage[pageNum]) { alert("¡Calibra la escala primero!"); return; } } 
-                if (['autoLine', 'autoArea'].includes(selectedMode) && !cvReady) { alert("El motor OpenCV aún se está cargando. Espera unos segundos."); return; }
+                if (['distance', 'dimension', 'polygonal', 'area', 'circle', 'arc', 'autoLine', 'autoArea'].includes(selectedMode)) { if (!scaleByPage[pageNum]) { cAlert("¡Calibra la escala primero!"); return; } } 
+                if (['autoLine', 'autoArea'].includes(selectedMode) && !cvReady) { cAlert("El motor OpenCV aún se está cargando. Espera unos segundos."); return; }
                 setMode(selectedMode);
             });
         });
@@ -351,7 +400,7 @@ codigo_html = """
         }
         
         document.getElementById('btnExport').onclick = () => {
-            const list = measurementsByPage[pageNum] || []; if (list.length === 0) return alert("No hay datos que exportar.");
+            const list = measurementsByPage[pageNum] || []; if (list.length === 0) return cAlert("No hay datos que exportar.");
             let csv = "\uFEFFHoja;Nombre;Tipo;Longitud/Perímetro (m);Área (m²);Radio (m)\n"; let pageLabel = pdfDoc ? `Página ${pageNum}` : "Imagen Única"; const typeTranslations = { 'straight': 'Línea Recta', 'dimension': 'Acotación CAD', 'polygonal': 'Línea Poligonal', 'area': 'Área Manual', 'circle': 'Círculo', 'arc': 'Arco', 'autoLine': 'Auto-Línea', 'autoArea': 'Auto-Área' };
             list.forEach(m => { let tipo = typeTranslations[m.type] || m.type; let longitud = (m.valM && m.valM !== "N/A") ? m.valM.toString().replace('.',',') : "-"; let area = m.valM2 ? m.valM2.toString().replace('.',',') : "-"; let radio = m.radiusM ? m.radiusM.toString().replace('.',',') : "-"; csv += `${pageLabel};"${m.name}";${tipo};${longitud};${area};${radio}\n`; });
             const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' })); link.download = `Mediciones_${pageLabel.replace(' ', '_')}.csv`; document.body.appendChild(link); link.click(); document.body.removeChild(link);
@@ -384,7 +433,7 @@ codigo_html = """
                         contours.delete(); hierarchy.delete(); drawCnts.delete(); overlay.delete();
                     }
                     src.delete(); low.delete(); high.delete(); mask.delete(); document.getElementById('statusText').innerText = "✅ Operación completada."; setMode('select');
-                } catch(err) { alert("No se pudo detectar el patrón. Haz clic en una zona definida."); setMode('select'); }
+                } catch(err) { cAlert("No se pudo detectar el patrón. Haz clic en una zona definida."); setMode('select'); }
             }, 50); 
         }
 
@@ -443,9 +492,10 @@ codigo_html = """
         function finishLineTool() {
             isDrawing = false; measureStep = 0; const dist = Math.hypot(endX - startX, endY - startY); if (dist < 5) { currentPath = []; redraw(); return; }
             if (mode === 'calibrate') {
-                let r = prompt("¿Cuántos metros reales tiene esta línea?");
-                if (r) { r = parseFloat(r.replace(',', '.')); if (!isNaN(r) && r > 0) { scaleByPage[pageNum] = dist / r; lastKnownScale = scaleByPage[pageNum]; document.getElementById('scaleInfo').innerText = `ESC. PÁG. ${pageNum} (1m = ${Math.round(scaleByPage[pageNum])}px)`; document.getElementById('scaleInfo').className = "scale-badge calibrated"; alert(`¡Escala guardada!`); setMode('distance'); } else { alert("Valor no válido."); } }
-                currentPath = []; redraw();
+                cPrompt("¿Cuántos metros reales tiene esta línea?", (r) => {
+                    if (r) { r = parseFloat(r.replace(',', '.')); if (!isNaN(r) && r > 0) { scaleByPage[pageNum] = dist / r; lastKnownScale = scaleByPage[pageNum]; document.getElementById('scaleInfo').innerText = `ESC. PÁG. ${pageNum} (1m = ${Math.round(scaleByPage[pageNum])}px)`; document.getElementById('scaleInfo').className = "scale-badge calibrated"; cAlert(`¡Escala guardada!`); setMode('distance'); } else { cAlert("Valor no válido."); } }
+                    currentPath = []; redraw();
+                });
             } else if (mode === 'distance') { addMeasurement({ type: 'straight', cx: (startX+endX)/2, cy: (startY+endY)/2, points: [...currentPath], valM: (dist/scaleByPage[pageNum]).toFixed(2), valM2: null }); currentPath = []; redraw(); } 
         }
 
