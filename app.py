@@ -7,10 +7,10 @@ import streamlit.components.v1 as components
 
 # =========================================================================
 # 1. GENERADOR AUTOMÁTICO DE FRONTEND
-# Python creará la carpeta y el HTML para comunicarse con el navegador
 # =========================================================================
-if not os.path.exists("frontend"):
-    os.makedirs("frontend")
+st.set_page_config(page_title="MidePlanos PRO", layout="wide", initial_sidebar_state="collapsed")
+
+os.makedirs("frontend", exist_ok=True)
 
 HTML_FRONTEND = r"""
 <!DOCTYPE html>
@@ -20,7 +20,6 @@ HTML_FRONTEND = r"""
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MidePlanos PRO - Pure Python Backend</title>
     
-    <!-- Lector PDF y Puente Oficial de Streamlit -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/streamlit-component-lib@1.3.0/dist/streamlit-component-lib.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -65,7 +64,6 @@ HTML_FRONTEND = r"""
         .btn-delete { background: #0f172a !important; border: 1px solid var(--border) !important; color: var(--text-muted) !important; padding: 4px 6px !important; border-radius: 4px !important; font-size: 10px; transition: 0.2s; flex-shrink: 0; cursor: pointer;} .btn-delete:hover { color: #fca5a5 !important; background: #7f1d1d !important; }
         .sidebar-footer { padding: 16px; border-top: 1px solid var(--border); background: rgba(15, 23, 42, 0.4); } .btn-export { width: 100%; background: linear-gradient(180deg, #10b981 0%, #059669 100%) !important; color: white !important; border-color: #059669 !important; padding: 10px !important; font-size: 13px; border-radius: 6px;}
 
-        /* MODAL NATIVO SEGURO (Bypass Streamlit Iframe) */
         #customModal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15,23,42,0.8); z-index: 99999; display: none; justify-content: center; align-items: center; backdrop-filter: blur(4px); }
         .modal-content { background: #1e293b; padding: 24px; border-radius: 12px; border: 1px solid #334155; color: white; width: 320px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
         .modal-content h3 { margin-top: 0; font-size: 15px; font-weight: 600; color: #f8fafc; }
@@ -77,23 +75,19 @@ HTML_FRONTEND = r"""
 </head>
 <body>
     <div id="customModal"><div class="modal-content"><h3 id="modalTitle"></h3><input type="text" id="modalInput" onkeyup="if(event.key === 'Enter') document.getElementById('modalBtnOk').click();" autocomplete="off"><div class="modal-buttons"><button id="modalBtnCancel" class="modal-cancel">Cancelar</button><button id="modalBtnOk" class="modal-ok">Aceptar</button></div></div></div>
-
     <canvas id="loupeCanvas" width="120" height="120"></canvas>
 
     <div class="header">
         <div class="toolbar-row">
             <div class="toolbar-group">
                 <label class="file-label">📄 Nuevo <input type="file" id="imageLoader" accept="image/png, image/jpeg, image/webp, application/pdf"/></label>
-                <label class="file-label" style="background: linear-gradient(180deg, #475569 0%, #334155 100%); border-color:#475569;">📂 Abrir Proyecto <input type="file" id="projectLoader" accept=".json"/></label>
-                <button id="btnSave" class="btn-action">💾 Guardar</button>
+                <button id="btnSave" class="btn-action">💾 Guardar Proyecto</button>
             </div>
             <div class="toolbar-group tools-top">
                 <button data-mode="select" class="tool-trigger active">↖️ Seleccionar</button>
                 <button data-mode="calibrate" class="tool-trigger">📏 Calibrar</button>
                 <button data-mode="distance" class="tool-trigger">➖ Recta</button>
-                <button data-mode="dimension" class="tool-trigger" style="color:#94a3b8;">|↔| Acotar</button>
-                <button data-mode="polygonal" class="tool-trigger">〰️ Poligonal</button>
-                <button data-mode="area" class="tool-trigger btn-success">⬟ Área</button>
+                <button data-mode="area" class="tool-trigger btn-success">⬟ Área Manual</button>
                 <button data-mode="autoLine" class="tool-trigger btn-magic" style="color:#d8b4fe;">⚡ Auto-Línea (IA)</button>
                 <button data-mode="autoArea" class="tool-trigger btn-magic" style="color:#d8b4fe;">✨ Auto-Área (IA)</button>
             </div>
@@ -103,7 +97,7 @@ HTML_FRONTEND = r"""
             <div class="controls-left">
                 <div class="pdf-controls" id="pdfControls"><button class="zoom-btn" id="btnPrev">◀</button><span style="font-size: 12px; font-weight: 600;">Pág <input type="number" id="pageInput" class="page-input" value="1" min="1"> de <span id="pageTotal">1</span></span><button class="zoom-btn" id="btnNext">▶</button></div>
                 <div class="zoom-controls"><span>🔍 Zoom:</span><button class="zoom-btn" id="btnZoomOut">➖</button><span id="zoomLevel">100%</span><button class="zoom-btn" id="btnZoomIn">➕</button></div>
-                <div id="statusText" class="status-text">Listo. Servidor Python conectado.</div>
+                <div id="statusText" class="status-text">✅ Servidor Python conectado y listo.</div>
             </div>
             <div id="scaleInfo" class="scale-badge">ESCALA NO CALIBRADA</div>
         </div>
@@ -112,13 +106,11 @@ HTML_FRONTEND = r"""
     <div class="main-container">
         <div class="left-toolbar">
             <button data-mode="select" class="tool-btn tool-trigger" data-tooltip="Seleccionar">↖️</button><hr style="width: 50%; border: 0; border-top: 1px solid var(--border); margin: 0;">
-            <button data-mode="calibrate" class="tool-btn tool-trigger" data-tooltip="Calibrar Escala">📏</button>
-            <button data-mode="distance" class="tool-btn tool-trigger" data-tooltip="Línea Recta">➖</button>
-            <button data-mode="dimension" class="tool-btn tool-trigger" data-tooltip="Acotación CAD" style="color:#94a3b8; font-size:13px; font-weight:bold; letter-spacing:-1px;">|↔|</button>
-            <button data-mode="polygonal" class="tool-btn tool-trigger" data-tooltip="Línea Poligonal">〰️</button>
-            <button data-mode="area" class="tool-btn btn-success tool-trigger" data-tooltip="Área Manual">⬟</button><hr style="width: 50%; border: 0; border-top: 1px solid var(--border); margin: 0;">
-            <button data-mode="autoLine" class="tool-btn btn-magic tool-trigger" data-tooltip="Auto-Línea (Python IA)">⚡</button>
-            <button data-mode="autoArea" class="tool-btn btn-magic tool-trigger" data-tooltip="Auto-Área (Python IA)">✨</button>
+            <button data-mode="calibrate" class="tool-btn tool-trigger" data-tooltip="Calibrar">📏</button>
+            <button data-mode="distance" class="tool-btn tool-trigger" data-tooltip="Línea">➖</button>
+            <button data-mode="area" class="tool-btn btn-success tool-trigger" data-tooltip="Área">⬟</button><hr style="width: 50%; border: 0; border-top: 1px solid var(--border); margin: 0;">
+            <button data-mode="autoLine" class="tool-btn btn-magic tool-trigger" data-tooltip="Auto-Línea (Python)">⚡</button>
+            <button data-mode="autoArea" class="tool-btn btn-magic tool-trigger" data-tooltip="Auto-Área (Python)">✨</button>
         </div>
         <div class="workspace"><div class="canvas-container" id="canvasContainer"><canvas id="planCanvas"></canvas></div></div>
         <div class="resizer" id="sidebarResizer"></div>
@@ -130,14 +122,12 @@ HTML_FRONTEND = r"""
     </div>
 
     <script>
-        // SOLUCIÓN AL PDF.js CORS PARA STREAMLIT CLOUD
         try {
             const pdfWorkerUrl = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
             const blob = new Blob([`importScripts('${pdfWorkerUrl}');`], { type: 'text/javascript' });
             pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(blob);
         } catch (e) { console.warn("Motor PDF seguro."); }
 
-        // Modales Seguros
         function cAlert(msg, callback) { const m = document.getElementById('customModal'); m.style.display = 'flex'; document.getElementById('modalTitle').innerText = msg; document.getElementById('modalInput').style.display = 'none'; document.getElementById('modalBtnCancel').style.display = 'none'; document.getElementById('modalBtnOk').onclick = () => { m.style.display = 'none'; if(callback) callback(); }; }
         function cPrompt(msg, callback) { const m = document.getElementById('customModal'); m.style.display = 'flex'; document.getElementById('modalTitle').innerText = msg; const inp = document.getElementById('modalInput'); inp.style.display = 'block'; inp.value = ''; setTimeout(() => inp.focus(), 50); document.getElementById('modalBtnCancel').style.display = 'block'; document.getElementById('modalBtnCancel').onclick = () => { m.style.display = 'none'; callback(null); }; document.getElementById('modalBtnOk').onclick = () => { m.style.display = 'none'; callback(inp.value); }; }
 
@@ -148,15 +138,14 @@ HTML_FRONTEND = r"""
         const resizer = document.getElementById('sidebarResizer'); const rightSidebar = document.getElementById('rightSidebar');
         
         let img = new Image(); let mode = 'select'; let currentZoom = 1; let measurementsByPage = {}; let counters = { line: 1, area: 1, circle: 1, arc: 1, dimension: 1 };
-        let scaleByPage = {}; let currentFileDataURL = null; let currentFileType = null; let currentFileName = null; let pdfDoc = null; let pageNum = 1; 
+        let scaleByPage = {}; let currentFileDataURL = null; let currentFileType = null; let pdfDoc = null; let pageNum = 1; 
         let isDrawing = false; let startX, startY, endX, endY; let currentPath = []; let tempPoint = null; let measureStep = 0; 
         let isPanning = false; let panStartX, panStartY, panScrollLeft, panScrollTop; let draggingLabel = null; let dragOffsetX = 0, dragOffsetY = 0;
         let editingMeasureId = null; let draggingPointIndex = -1; let highlightedMeasureId = null; let isResizing = false;
 
-        function getDefaultColor(type) { if (type === 'straight') return '#0ea5e9'; if (type === 'dimension') return '#3b82f6'; if (type === 'polygonal') return '#f59e0b'; if (type === 'area' || type === 'autoArea') return '#10b981'; if (type === 'autoLine') return '#a855f7'; return '#ffffff'; }
+        function getDefaultColor(type) { if (type === 'straight') return '#0ea5e9'; if (type === 'area' || type === 'autoArea') return '#10b981'; if (type === 'autoLine') return '#a855f7'; return '#ffffff'; }
         function hexToRgba(hex, alpha) { if(!hex) return `rgba(255,255,255,${alpha})`; hex = hex.replace('#', ''); if(hex.length === 3) hex = hex.split('').map(x => x + x).join(''); let r = parseInt(hex.substring(0,2), 16), g = parseInt(hex.substring(2,4), 16), b = parseInt(hex.substring(4,6), 16); return `rgba(${r}, ${g}, ${b}, ${alpha})`; }
         function getMousePos(e) { const rect = canvas.getBoundingClientRect(); return { x: (e.clientX - rect.left) * (canvas.width / rect.width), y: (e.clientY - rect.top) * (canvas.height / rect.height) }; }
-        function getCADOffset(p1, p2, p3) { let dx = p2.x - p1.x; let dy = p2.y - p1.y; let len = Math.hypot(dx, dy); if (len === 0) return { d: 0, nx: 0, ny: 0, dx: 0, dy: 0, len: 0 }; let nx = -dy / len; let ny = dx / len; let d = (p3.x - p1.x) * nx + (p3.y - p1.y) * ny; return { d, nx, ny, dx, dy, len }; }
 
         resizer.addEventListener('mousedown', () => { isResizing = true; document.body.style.cursor = 'ew-resize'; });
         document.addEventListener('mousemove', (e) => { if (!isResizing) return; const newWidth = document.body.clientWidth - e.clientX; if (newWidth > 200 && newWidth < 600) rightSidebar.style.width = newWidth + 'px'; });
@@ -203,18 +192,17 @@ HTML_FRONTEND = r"""
 
         imageLoader.addEventListener('change', function(e) {
             const file = e.target.files[0]; if (!file) return;
-            currentFileType = file.type; currentFileName = file.name; measurementsByPage = {}; counters = { line: 1, area: 1, circle: 1, arc: 1, dimension: 1 }; pageNum = 1; scaleByPage = {}; document.getElementById('statusText').innerText = "Cargando plano...";
+            currentFileType = file.type; measurementsByPage = {}; counters = { line: 1, area: 1, circle: 1, arc: 1, dimension: 1 }; pageNum = 1; scaleByPage = {}; document.getElementById('statusText').innerText = "Cargando plano...";
             const reader = new FileReader(); reader.onload = function(event) { currentFileDataURL = event.target.result; loadDocumentFromDataURL(true); }; reader.readAsDataURL(file); e.target.value = ""; 
         });
 
         document.getElementById('btnPrev').onclick = () => { if (pageNum > 1) { pageNum--; renderPage(pageNum, false); }};
         document.getElementById('btnNext').onclick = () => { if (pageNum < pdfDoc.numPages) { pageNum++; renderPage(pageNum, false); }};
-        pageInput.addEventListener('change', (e) => { if (!pdfDoc) return; let val = parseInt(e.target.value); if (isNaN(val) || val < 1) val = 1; if (val > pdfDoc.numPages) val = pdfDoc.numPages; if (val !== pageNum) { pageNum = val; renderPage(pageNum, false); } else pageInput.value = pageNum; });
 
         document.querySelectorAll('.tool-trigger').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const selectedMode = e.currentTarget.getAttribute('data-mode');
-                if (['distance', 'dimension', 'polygonal', 'area', 'autoLine', 'autoArea'].includes(selectedMode)) { if (!scaleByPage[pageNum]) { cAlert("¡Calibra la escala primero!"); return; } } 
+                if (['distance', 'area', 'autoLine', 'autoArea'].includes(selectedMode)) { if (!scaleByPage[pageNum]) { cAlert("¡Calibra la escala primero!"); return; } } 
                 setMode(selectedMode);
             });
         });
@@ -222,25 +210,22 @@ HTML_FRONTEND = r"""
         function setMode(newMode) {
             mode = newMode; 
             document.querySelectorAll('.tool-trigger').forEach(btn => btn.classList.remove('active'));
-            if(mode !== 'none') { document.querySelectorAll(`.tool-trigger[data-mode="${mode}"]`).forEach(btn => { btn.classList.add('active'); if(['dimension', 'printArea'].includes(mode)) { btn.style.borderColor = 'transparent'; btn.style.color = 'white'; } }); }
-            document.querySelectorAll(`.tool-trigger[data-mode="dimension"]:not(.active)`).forEach(b => { b.style.color = '#94a3b8'; b.style.borderColor = 'transparent'; });
+            if(mode !== 'none') { document.querySelectorAll(`.tool-trigger[data-mode="${mode}"]`).forEach(btn => btn.classList.add('active')); }
             canvas.style.cursor = (mode === 'select' || mode === 'pan') ? 'grab' : 'crosshair';
             
-            const txts = {
-                'select': "Modo Selección", 'calibrate': "1º Clic (Inicio) -> 2º Clic (Fin)", 'distance': "1º Clic (Inicio) -> 2º Clic (Fin)", 'dimension': "1º Inicio -> 2º Fin -> 3º Posición de cota",
-                'polygonal': "Clics para fijar puntos. Clic derecho = Terminar", 'area': "Clics para esquinas. Clic derecho = Cerrar", 'autoLine': "Haz clic en la red para que la IA la calcule", 'autoArea': "Haz clic en el sombreado para que la IA lo calcule"
-            };
+            const txts = { 'select': "Modo Selección", 'calibrate': "1º Clic (Inicio) -> 2º Clic (Fin)", 'distance': "1º Clic (Inicio) -> 2º Clic (Fin)", 'area': "Clics para esquinas. Clic derecho = Cerrar", 'autoLine': "Haz clic en la red para que Python la calcule", 'autoArea': "Haz clic en el sombreado para que Python lo calcule" };
             if(txts[mode]) document.getElementById('statusText').innerText = txts[mode];
             isDrawing = false; measureStep = 0; currentPath = []; tempPoint = null; if (mode !== 'select') editingMeasureId = null; redraw(); loupeCanvas.style.display = 'none';
         }
 
         // =========================================================================
-        // CONEXIÓN CON PYTHON EN LA NUBE (STREAMLIT BRIDGE)
+        // COMUNICACIÓN CON PYTHON (STREAMLIT CLOUD)
         // =========================================================================
         function triggerCloudProcessing(startX, startY, autoMode) {
-            document.getElementById('statusText').innerText = "☁️ Servidor procesando con matriz Morph_Close (Topología CAD)...";
+            document.getElementById('statusText').innerText = "☁️ Enviando coordenadas al servidor Python...";
             document.getElementById('statusText').style.color = "#fcd34d";
             
+            // Enviamos todo a Python
             Streamlit.setComponentValue({
                 action: autoMode,
                 x: startX,
@@ -257,26 +242,19 @@ HTML_FRONTEND = r"""
             const data = event.detail.args;
             if (data && data.comando_desde_python) {
                 const pyRes = data.comando_desde_python;
-                // Evitamos procesar dos veces la misma respuesta del servidor
                 if (pyRes.ts && pyRes.ts !== lastProcessedTs) {
                     lastProcessedTs = pyRes.ts;
                     
                     if (pyRes.error) {
                         cAlert(pyRes.error);
-                        document.getElementById('statusText').innerText = "❌ Error en el cálculo.";
+                        document.getElementById('statusText').innerText = "❌ Error en Python.";
                     } else {
                         let resImg = new Image();
                         resImg.onload = () => {
                             addMeasurement({
-                                type: pyRes.tipo,
-                                img: resImg,
-                                cx: pyRes.cx,
-                                cy: pyRes.cy,
-                                points: pyRes.puntos,
-                                valM: pyRes.perimetro,
-                                valM2: pyRes.area
+                                type: pyRes.tipo, img: resImg, cx: pyRes.cx, cy: pyRes.cy, points: pyRes.puntos, valM: pyRes.perimetro, valM2: pyRes.area
                             });
-                            document.getElementById('statusText').innerText = "✅ Cálculo estructural devuelto por Python.";
+                            document.getElementById('statusText').innerText = "✅ Procesado con éxito en la Nube.";
                             document.getElementById('statusText').style.color = "#6ee7b7";
                         };
                         resImg.src = pyRes.img_base64;
@@ -288,19 +266,16 @@ HTML_FRONTEND = r"""
 
         Streamlit.events.addEventListener(Streamlit.RENDER_EVENT, onRender);
         Streamlit.setComponentReady();
-        // =========================================================================
 
         function recalculateMeasurement(m, currScale) {
             if (!currScale) return;
             if (m.type === 'straight') { let dist = Math.hypot(m.points[1].x - m.points[0].x, m.points[1].y - m.points[0].y); m.valM = (dist / currScale).toFixed(2); m.cx = (m.points[0].x + m.points[1].x)/2; m.cy = (m.points[0].y + m.points[1].y)/2; } 
-            else if (m.type === 'dimension') { let dist = Math.hypot(m.points[1].x - m.points[0].x, m.points[1].y - m.points[0].y); m.valM = (dist / currScale).toFixed(2); let cad = getCADOffset(m.points[0], m.points[1], m.points[2]); m.cx = (m.points[0].x + m.points[1].x)/2 + cad.d * cad.nx; m.cy = (m.points[0].y + m.points[1].y)/2 + cad.d * cad.ny; }
-            else if (m.type === 'polygonal') { let t = 0; for(let i=1; i<m.points.length; i++) t += Math.hypot(m.points[i].x - m.points[i-1].x, m.points[i].y - m.points[i-1].y); m.valM = (t / currScale).toFixed(2); m.cx = m.points[m.points.length-1].x; m.cy = m.points[m.points.length-1].y; }
             else if (m.type === 'area') { let per = 0, ar = 0, n = m.points.length, cX = 0, cY = 0; for(let i=0; i<n; i++) { let p1 = m.points[i], p2 = m.points[(i+1)%n]; per += Math.hypot(p2.x - p1.x, p2.y - p1.y); ar += (p1.x * p2.y - p2.x * p1.y); cX += p1.x; cY += p1.y; } m.valM = (per / currScale).toFixed(2); m.valM2 = (Math.abs(ar)/2/(currScale*currScale)).toFixed(2); m.cx = cX / n; m.cy = cY / n; }
         }
 
         function addMeasurement(data) {
             if (!measurementsByPage[pageNum]) measurementsByPage[pageNum] = []; data.id = Date.now().toString() + Math.floor(Math.random()*1000); data.lblOffset = { x: 0, y: -30 }; data.color = getDefaultColor(data.type);
-            let namePrefix = "Medida"; if (data.type === 'area' || data.type === 'autoArea') namePrefix = `Área ${counters.area++}`; else if (data.type === 'dimension') namePrefix = `Cota ${counters.dimension++}`; else namePrefix = `Línea ${counters.line++}`;
+            let namePrefix = "Medida"; if (data.type === 'area' || data.type === 'autoArea') namePrefix = `Área ${counters.area++}`; else namePrefix = `Línea ${counters.line++}`;
             data.name = data.name || namePrefix; measurementsByPage[pageNum].push(data); editingMeasureId = data.id; if(mode !== 'select') setMode('select'); else { updateSidebar(); redraw(); }
         }
         function deleteMeasurement(id) { if (measurementsByPage[pageNum]) { measurementsByPage[pageNum] = measurementsByPage[pageNum].filter(m => m.id !== id); if(editingMeasureId === id) editingMeasureId = null; updateSidebar(); redraw(); } }
@@ -315,21 +290,21 @@ HTML_FRONTEND = r"""
                 const item = document.createElement('div'); item.className = `measure-item type-${m.type.toLowerCase()} ${m.id === editingMeasureId ? 'selected' : ''}`; item.style.borderLeftColor = m.color;
                 item.onmouseenter = () => { item.classList.add('highlighted'); highlightMeasurement(m.id); }; item.onmouseleave = () => { item.classList.remove('highlighted'); clearHighlight(); };
                 item.onclick = (ev) => { if(ev.target.tagName !== 'INPUT' && ev.target.tagName !== 'BUTTON') { editingMeasureId = m.id; if(mode !== 'select') setMode('select'); else { updateSidebar(); redraw(); } } };
-                let valStr = ""; if (['straight', 'polygonal', 'autoLine', 'dimension'].includes(m.type)) { valStr = `<span>${m.valM}</span>&nbsp;m`; } else { valStr = `<span>${m.valM2}</span>&nbsp;m²`; }
+                let valStr = ""; if (['straight', 'autoLine'].includes(m.type)) { valStr = `<span>${m.valM}</span>&nbsp;m`; } else { valStr = `<span>${m.valM2}</span>&nbsp;m²`; }
                 item.innerHTML = ` <input type="color" class="color-picker" value="${m.color}" onchange="updateMeasurementColor('${m.id}', this.value)" title="Color"> <input type="text" class="measure-name" value="${m.name}" onchange="updateMeasurementName('${m.id}', this.value)" onkeyup="if(event.key === 'Enter') this.blur();"> <div class="measure-values">${valStr}</div> <button class="btn-delete" onclick="deleteMeasurement('${m.id}')" title="Borrar">✖</button> `;
                 measurementListEl.appendChild(item);
             });
         }
 
-        function getLabelAtPos(x, y) { const list = measurementsByPage[pageNum] || []; for (let i = list.length - 1; i >= 0; i--) { const m = list[i]; if (!m.lblOffset) continue; const rx = m.cx + m.lblOffset.x, ry = m.cy + m.lblOffset.y; const boxHeight = (m.type === 'straight' || m.type === 'dimension' || m.type === 'polygonal' || m.type === 'autoLine') ? 18 : 32; if (x >= rx - 50 && x <= rx + 50 && y >= ry - 14 && y <= ry - 14 + boxHeight) return m; } return null; }
+        function getLabelAtPos(x, y) { const list = measurementsByPage[pageNum] || []; for (let i = list.length - 1; i >= 0; i--) { const m = list[i]; if (!m.lblOffset) continue; const rx = m.cx + m.lblOffset.x, ry = m.cy + m.lblOffset.y; const boxHeight = 18; if (x >= rx - 50 && x <= rx + 50 && y >= ry - 14 && y <= ry - 14 + boxHeight) return m; } return null; }
         function getPointAtPos(m, x, y) { if (!m.points) return -1; for (let i = 0; i < m.points.length; i++) { if (Math.hypot(x - m.points[i].x, y - m.points[i].y) < 15) return i; } return -1; }
 
-        canvas.addEventListener('contextmenu', (e) => { e.preventDefault(); if (['polygonal', 'area'].includes(mode) && currentPath.length > 0) { if (measureStep >= 1) { finishPolyArea(); } } else { isDrawing = false; measureStep = 0; currentPath = []; tempPoint = null; redraw(); } });
+        canvas.addEventListener('contextmenu', (e) => { e.preventDefault(); if (mode === 'area' && currentPath.length > 0) { if (measureStep >= 1) { finishPolyArea(); } } else { isDrawing = false; measureStep = 0; currentPath = []; tempPoint = null; redraw(); } });
         document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { isDrawing = false; measureStep = 0; currentPath = []; tempPoint = null; redraw(); } });
 
         canvas.addEventListener('mousemove', (e) => {
             const {x, y} = getMousePos(e);
-            if (['calibrate', 'distance', 'dimension', 'polygonal', 'area', 'autoLine', 'autoArea'].includes(mode) || draggingPointIndex !== -1) { updateLoupe(e, x, y); } else { loupeCanvas.style.display = 'none'; }
+            if (['calibrate', 'distance', 'area', 'autoLine', 'autoArea'].includes(mode) || draggingPointIndex !== -1) { updateLoupe(e, x, y); } else { loupeCanvas.style.display = 'none'; }
             if (mode === 'select') {
                 if (draggingPointIndex !== -1 && editingMeasureId) { const m = measurementsByPage[pageNum].find(val => val.id === editingMeasureId); if (m) { m.points[draggingPointIndex] = {x, y}; recalculateMeasurement(m, scaleByPage[pageNum]); updateSidebar(); redraw(); } }
                 else if (draggingLabel) { draggingLabel.lblOffset.x = x - draggingLabel.cx - dragOffsetX; draggingLabel.lblOffset.y = y - draggingLabel.cy - dragOffsetY; redraw(); }
@@ -337,7 +312,7 @@ HTML_FRONTEND = r"""
                 else { if (getLabelAtPos(x, y)) canvas.style.cursor = 'move'; else canvas.style.cursor = 'default'; } return;
             }
             if (mode === 'pan' && isPanning) { canvasContainer.scrollLeft = panScrollLeft - (e.clientX - panStartX); canvasContainer.scrollTop = panScrollTop - (e.clientY - panStartY); return; }
-            if (isDrawing && ['calibrate', 'distance', 'polygonal', 'area', 'dimension'].includes(mode)) { tempPoint = {x, y}; redraw(); }
+            if (isDrawing && ['calibrate', 'distance', 'area'].includes(mode)) { tempPoint = {x, y}; redraw(); }
             if (!isDrawing && !isPanning && !draggingLabel) { canvas.style.cursor = 'crosshair'; }
         });
 
@@ -352,14 +327,12 @@ HTML_FRONTEND = r"""
 
             if (['autoLine', 'autoArea'].includes(mode)) { triggerCloudProcessing(x, y, mode); return; }
 
-            if (['calibrate', 'distance', 'polygonal', 'area', 'dimension'].includes(mode)) {
+            if (['calibrate', 'distance', 'area'].includes(mode)) {
                 if (measureStep === 0) { startX = x; startY = y; currentPath = [{x, y}]; isDrawing = true; measureStep = 1; }
                 else if (measureStep === 1) {
                     if (['calibrate', 'distance'].includes(mode)) { endX = x; endY = y; currentPath.push({x, y}); finishLineTool(); } 
-                    else if (mode === 'dimension') { currentPath.push({x, y}); measureStep = 2; }
-                    else if (['polygonal', 'area'].includes(mode)) { const lastP = currentPath[currentPath.length - 1]; if (Math.hypot(x - lastP.x, y - lastP.y) > 5) currentPath.push({x, y}); }
+                    else if (mode === 'area') { const lastP = currentPath[currentPath.length - 1]; if (Math.hypot(x - lastP.x, y - lastP.y) > 5) currentPath.push({x, y}); }
                 }
-                else if (measureStep === 2) { if (mode === 'dimension') { currentPath.push({x, y}); finish3PointTool(); } }
             }
         });
 
@@ -379,50 +352,37 @@ HTML_FRONTEND = r"""
             } else if (mode === 'distance') { addMeasurement({ type: 'straight', cx: (startX+endX)/2, cy: (startY+endY)/2, points: [...currentPath], valM: (dist/scaleByPage[pageNum]).toFixed(2), valM2: null }); currentPath = []; redraw(); } 
         }
 
-        function finish3PointTool() {
-            isDrawing = false; measureStep = 0; const currScale = scaleByPage[pageNum];
-            if (mode === 'dimension') { let distPx = Math.hypot(currentPath[1].x - currentPath[0].x, currentPath[1].y - currentPath[0].y); let cad = getCADOffset(currentPath[0], currentPath[1], currentPath[2]); addMeasurement({ type: 'dimension', cx: (currentPath[0].x + currentPath[1].x)/2 + cad.d * cad.nx, cy: (currentPath[0].y + currentPath[1].y)/2 + cad.d * cad.ny, points: [...currentPath], valM: (distPx/currScale).toFixed(2), valM2: null }); }
-            currentPath = []; tempPoint = null; redraw();
-        }
-
         function finishPolyArea() {
             if (currentPath.length < 2) { currentPath = []; tempPoint = null; redraw(); return; }
             isDrawing = false; measureStep = 0; const currScale = scaleByPage[pageNum];
-            if (mode === 'polygonal') { let t = 0; for (let i = 1; i < currentPath.length; i++) t += Math.hypot(currentPath[i].x - currentPath[i-1].x, currentPath[i].y - currentPath[i-1].y); addMeasurement({ type: 'polygonal', cx: currentPath[currentPath.length-1].x, cy: currentPath[currentPath.length-1].y, points: [...currentPath], valM: (t/currScale).toFixed(2), valM2: null }); } 
-            else if (mode === 'area') { if (currentPath.length < 3) return; let per = 0, ar = 0, n = currentPath.length, cX = 0, cY = 0; for (let i = 0; i < n; i++) { const p1 = currentPath[i], p2 = currentPath[(i+1)%n]; per += Math.hypot(p2.x-p1.x, p2.y-p1.y); ar += (p1.x*p2.y - p2.x*p1.y); cX += p1.x; cY += p1.y; } addMeasurement({ type: 'area', cx: cX/n, cy: cY/n, points: [...currentPath], valM: (per/currScale).toFixed(2), valM2: (Math.abs(ar)/2/(currScale*currScale)).toFixed(2) }); } 
+            if (mode === 'area') { if (currentPath.length < 3) return; let per = 0, ar = 0, n = currentPath.length, cX = 0, cY = 0; for (let i = 0; i < n; i++) { const p1 = currentPath[i], p2 = currentPath[(i+1)%n]; per += Math.hypot(p2.x-p1.x, p2.y-p1.y); ar += (p1.x*p2.y - p2.x*p1.y); cX += p1.x; cY += p1.y; } addMeasurement({ type: 'area', cx: cX/n, cy: cY/n, points: [...currentPath], valM: (per/currScale).toFixed(2), valM2: (Math.abs(ar)/2/(currScale*currScale)).toFixed(2) }); } 
             currentPath = []; tempPoint = null; redraw();
         }
 
         function drawLine(x1, y1, x2, y2, color, isHigh) { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.strokeStyle = isHigh ? '#ffffff' : color; ctx.lineWidth = isHigh ? 5 : 3; if(isHigh) { ctx.shadowColor = color; ctx.shadowBlur = 8; } ctx.stroke(); ctx.shadowBlur = 0; ctx.fillStyle = isHigh ? '#ffffff' : color; ctx.beginPath(); ctx.arc(x1, y1, isHigh? 4 : 2.5, 0, Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(x2, y2, isHigh? 4 : 2.5, 0, Math.PI*2); ctx.fill(); }
-        function drawDimensionData(pts, color, isHigh) { let p1 = pts[0], p2 = pts[1], p3 = pts[2]; let cad = getCADOffset(p1, p2, p3); if (cad.len === 0) return; let off1x = p1.x + cad.d * cad.nx, off1y = p1.y + cad.d * cad.ny; let off2x = p2.x + cad.d * cad.nx, off2y = p2.y + cad.d * cad.ny; ctx.strokeStyle = isHigh ? '#ffffff' : color; if(isHigh) { ctx.shadowColor = color; ctx.shadowBlur = 8; } ctx.lineWidth = isHigh ? 3 : 1.5; let extDir = cad.d >= 0 ? 1 : -1; ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(off1x + extDir * 8 * cad.nx, off1y + extDir * 8 * cad.ny); ctx.moveTo(p2.x, p2.y); ctx.lineTo(off2x + extDir * 8 * cad.nx, off2y + extDir * 8 * cad.ny); ctx.stroke(); ctx.lineWidth = isHigh ? 4 : 2; ctx.beginPath(); ctx.moveTo(off1x, off1y); ctx.lineTo(off2x, off2y); ctx.stroke(); let tL = 5; let tx = cad.nx * tL; let ty = cad.ny * tL; let dxT = (cad.dx / cad.len) * tL; let dyT = (cad.dy / cad.len) * tL; ctx.lineWidth = isHigh ? 4 : 2; ctx.beginPath(); ctx.moveTo(off1x - dxT + tx, off1y - dyT + ty); ctx.lineTo(off1x + dxT - tx, off1y + dyT - ty); ctx.moveTo(off2x - dxT + tx, off2y - dyT + ty); ctx.lineTo(off2x + dxT - tx, off2y + dyT - ty); ctx.stroke(); ctx.shadowBlur = 0; }
         function drawPathData(pts, color, isClosed, isHigh) { ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y); for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y); if (isClosed) { ctx.closePath(); ctx.fillStyle = hexToRgba(color, isHigh ? 0.3 : 0.15); ctx.fill(); } ctx.strokeStyle = isHigh ? '#ffffff' : color; ctx.lineWidth = isHigh ? 5 : 3; if(isHigh) { ctx.shadowColor = color; ctx.shadowBlur = 8; } ctx.stroke(); ctx.shadowBlur = 0; ctx.fillStyle = isHigh ? '#ffffff' : color; pts.forEach(p => { ctx.beginPath(); ctx.arc(p.x, p.y, isHigh? 4 : 2.5, 0, Math.PI*2); ctx.fill(); }); }
         function renderLabel(x, y, text, color, isHigh) { const lines = text.split('\n'); ctx.fillStyle = isHigh ? "#ffffff" : "rgba(255, 255, 255, 0.95)"; ctx.shadowColor = isHigh ? color : "rgba(0,0,0,0.15)"; ctx.shadowBlur = isHigh ? 12 : 6; ctx.shadowOffsetY = isHigh ? 0 : 3; ctx.beginPath(); ctx.roundRect(x - 50, y - 14, 100, lines.length > 1 ? 32 : 18, 4); ctx.fill(); ctx.shadowBlur = 0; ctx.shadowOffsetY = 0; ctx.fillStyle = "#0f172a"; ctx.font = "bold 10px Inter, sans-serif"; ctx.textAlign = "center"; lines.forEach((l, i) => { if(i>0) {ctx.fillStyle = color; ctx.font = "bold 10px Inter, sans-serif";} ctx.fillText(l, x, y + 0 + (i*13)); }); }
         
         function redraw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height); if (img.src) ctx.drawImage(img, 0, 0);
             const list = measurementsByPage[pageNum] || []; const sortedList = [...list.filter(m => m.id !== highlightedMeasureId), ...list.filter(m => m.id === highlightedMeasureId)];
+            
             sortedList.forEach(m => {
                 const isHigh = (m.id === highlightedMeasureId); const col = m.color;
                 if (m.type === 'autoArea' || m.type === 'autoLine') { const tCanv = document.createElement('canvas'); tCanv.width = canvas.width; tCanv.height = canvas.height; const tc = tCanv.getContext('2d'); tc.drawImage(m.img, 0, 0); tc.globalCompositeOperation = 'source-in'; tc.fillStyle = col; tc.fillRect(0, 0, canvas.width, canvas.height); if (isHigh) { ctx.shadowColor = col; ctx.shadowBlur = 12; } ctx.drawImage(tCanv, 0, 0); ctx.shadowBlur = 0; }
                 else if (m.type === 'straight') drawLine(m.points[0].x, m.points[0].y, m.points[1].x, m.points[1].y, col, isHigh);
-                else if (m.type === 'dimension') drawDimensionData(m.points, col, isHigh);
-                else if (m.type === 'polygonal') drawPathData(m.points, col, false, isHigh);
                 else if (m.type === 'area') drawPathData(m.points, col, true, isHigh);
             });
             if (isDrawing && currentPath.length > 0) {
                 if (['calibrate', 'distance'].includes(mode) && tempPoint) { drawLine(currentPath[0].x, currentPath[0].y, tempPoint.x, tempPoint.y, mode==='calibrate'?'#ef4444':'#0ea5e9', false); }
-                else if (mode === 'dimension') {
-                    if (currentPath.length === 1 && tempPoint) { drawLine(currentPath[0].x, currentPath[0].y, tempPoint.x, tempPoint.y, 'var(--cad)', false); }
-                    else if (currentPath.length === 2 && tempPoint) { drawDimensionData([currentPath[0], currentPath[1], tempPoint], 'var(--cad)', false); }
-                }
-                else if (['polygonal', 'area'].includes(mode)) { ctx.beginPath(); ctx.moveTo(currentPath[0].x, currentPath[0].y); for (let i = 1; i < currentPath.length; i++) ctx.lineTo(currentPath[i].x, currentPath[i].y); if (tempPoint) ctx.lineTo(tempPoint.x, tempPoint.y); if (mode === 'area' && currentPath.length > 2 && tempPoint == null) ctx.closePath(); const dC = mode === 'area' ? '#10b981' : '#f59e0b'; ctx.strokeStyle = dC; ctx.lineWidth = 2; ctx.setLineDash([6, 6]); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = dC; currentPath.forEach(p => { ctx.beginPath(); ctx.arc(p.x, p.y, 2.5, 0, Math.PI*2); ctx.fill(); }); }
+                else if (mode === 'area') { ctx.beginPath(); ctx.moveTo(currentPath[0].x, currentPath[0].y); for (let i = 1; i < currentPath.length; i++) ctx.lineTo(currentPath[i].x, currentPath[i].y); if (tempPoint) ctx.lineTo(tempPoint.x, tempPoint.y); if (mode === 'area' && currentPath.length > 2 && tempPoint == null) ctx.closePath(); const dC = '#10b981'; ctx.strokeStyle = dC; ctx.lineWidth = 2; ctx.setLineDash([6, 6]); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = dC; currentPath.forEach(p => { ctx.beginPath(); ctx.arc(p.x, p.y, 2.5, 0, Math.PI*2); ctx.fill(); }); }
             }
             sortedList.forEach(m => {
                 const isHigh = (m.id === highlightedMeasureId);
-                if (m.cx === undefined) { if (m.type === 'straight') { m.cx = (m.points[0].x + m.points[1].x)/2; m.cy = (m.points[0].y + m.points[1].y)/2; } else if (m.type === 'area') { let cx=0,cy=0; m.points.forEach(p=>{cx+=p.x;cy+=p.y;}); m.cx=cx/m.points.length; m.cy=cy/m.points.length; } else if (m.type === 'polygonal') { m.cx = m.points[m.points.length-1].x; m.cy = m.points[m.points.length-1].y; } }
+                if (m.cx === undefined) { if (m.type === 'straight') { m.cx = (m.points[0].x + m.points[1].x)/2; m.cy = (m.points[0].y + m.points[1].y)/2; } else if (m.type === 'area') { let cx=0,cy=0; m.points.forEach(p=>{cx+=p.x;cy+=p.y;}); m.cx=cx/m.points.length; m.cy=cy/m.points.length; } }
                 if (!m.lblOffset) m.lblOffset = { x: 0, y: -30 }; let rx = m.cx + m.lblOffset.x, ry = m.cy + m.lblOffset.y;
                 let lbl = m.name + '\n'; lbl += (m.type === 'area' || m.type === 'autoArea') ? `${m.valM2} m²` : `${m.valM} m`;
-                if (Math.hypot(m.lblOffset.x, m.lblOffset.y) > 25 && m.type !== 'dimension') { ctx.beginPath(); ctx.moveTo(m.cx, m.cy); ctx.lineTo(rx, ry); ctx.strokeStyle = isHigh ? m.color : "rgba(15, 23, 42, 0.4)"; ctx.setLineDash([4,4]); ctx.lineWidth = isHigh ? 2 : 1; ctx.stroke(); ctx.setLineDash([]); }
+                if (Math.hypot(m.lblOffset.x, m.lblOffset.y) > 25) { ctx.beginPath(); ctx.moveTo(m.cx, m.cy); ctx.lineTo(rx, ry); ctx.strokeStyle = isHigh ? m.color : "rgba(15, 23, 42, 0.4)"; ctx.setLineDash([4,4]); ctx.lineWidth = isHigh ? 2 : 1; ctx.stroke(); ctx.setLineDash([]); }
                 renderLabel(rx, ry, lbl, m.color, isHigh);
             });
             if (editingMeasureId) { const m = list.find(val => val.id === editingMeasureId); if (m && m.points && m.type !== 'autoArea' && m.type !== 'autoLine') { ctx.fillStyle = '#ffffff'; ctx.lineWidth = 2; ctx.strokeStyle = '#0ea5e9'; m.points.forEach(p => { ctx.beginPath(); ctx.arc(p.x, p.y, 6, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }); } }
@@ -436,11 +396,10 @@ with open("frontend/index.html", "w", encoding="utf-8") as f:
     f.write(HTML_FRONTEND)
 
 # =========================================================================
-# 2. EL MOTOR DE INTELIGENCIA DE OPENCV EN PYTHON
+# 2. MOTOR INTELIGENTE DE OPENCV EN LA NUBE
 # =========================================================================
 def procesar_nube(img_b64, x, y, modo, scale, ts):
     try:
-        # Decodificar imagen desde el navegador
         img_data = base64.b64decode(img_b64.split(",")[1])
         np_arr = np.frombuffer(img_data, np.uint8)
         img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
@@ -452,13 +411,12 @@ def procesar_nube(img_b64, x, y, modo, scale, ts):
         mask = cv2.inRange(img, lower, upper)
 
         if modo == "autoArea":
-            # LA MAGIA: Una matriz enorme (35x35) que ningún navegador web soportaría.
-            # Sella y rellena los sombreados (hatching) de AutoCAD en milisegundos.
+            # Matriz enorme de 35x35 que sella los sombreados (hatching) de CAD
             kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (35, 35))
             mask_closed = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
             
             contornos, _ = cv2.findContours(mask_closed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            if not contornos: return {"ts": ts, "error": "No se detectó ningún sombreado en ese punto."}
+            if not contornos: return {"ts": ts, "error": "No se detectó ningún sombreado."}
             
             cnt = max(contornos, key=cv2.contourArea)
             epsilon = 0.002 * cv2.arcLength(cnt, True)
@@ -467,7 +425,6 @@ def procesar_nube(img_b64, x, y, modo, scale, ts):
             area_px = cv2.contourArea(approx)
             per_px = cv2.arcLength(approx, True)
             
-            # Pinta el overlay en verde directamente desde el servidor
             overlay = np.zeros((img.shape[0], img.shape[1], 4), dtype=np.uint8)
             cv2.drawContours(overlay, [approx], -1, (129, 185, 16, 150), -1) 
             _, buffer = cv2.imencode('.png', overlay)
@@ -485,7 +442,7 @@ def procesar_nube(img_b64, x, y, modo, scale, ts):
             
         else: # autoLine
             contornos, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            if not contornos: return {"ts": ts, "error": "No se detectó ninguna línea de ese color."}
+            if not contornos: return {"ts": ts, "error": "No se detectó ninguna línea."}
             
             cnt = max(contornos, key=cv2.contourArea)
             per_px = cv2.arcLength(cnt, True) / 2
@@ -505,10 +462,10 @@ def procesar_nube(img_b64, x, y, modo, scale, ts):
             }
             
     except Exception as e:
-        return {"ts": ts, "error": str(e)}
+        return {"ts": ts, "error": f"Error del motor: {str(e)}"}
 
 # =========================================================================
-# 3. CONEXIÓN STREAMLIT ↔ JAVASCRIPT
+# 3. COMUNICADOR STREAMLIT ↔ FRONTEND
 # =========================================================================
 if 'ultimo_ts' not in st.session_state:
     st.session_state.ultimo_ts = None
@@ -517,15 +474,15 @@ if 'resultado_backend' not in st.session_state:
 
 mideplanos_component = components.declare_component("mideplanos", path="frontend")
 
-# Mandamos al navegador el último resultado calculado por Python
+# Mandamos datos al frontend
 datos_desde_js = mideplanos_component(comando_desde_python=st.session_state.resultado_backend)
 
-# Recibimos las coordenadas del clic del usuario
-if datos_desde_js and "ts" in datos_js:
-    if datos_js["ts"] != st.session_state.ultimo_ts:
-        st.session_state.ultimo_ts = datos_js["ts"]
+# Recibimos datos del frontend
+if datos_desde_js and "ts" in datos_desde_js:
+    if datos_desde_js["ts"] != st.session_state.ultimo_ts:
+        st.session_state.ultimo_ts = datos_desde_js["ts"]
         
-        # Procesamos en la nube usando toda la potencia
+        # Procesamos con Python
         res = procesar_nube(
             datos_desde_js["image"], 
             datos_desde_js["x"], 
@@ -535,4 +492,4 @@ if datos_desde_js and "ts" in datos_js:
             datos_desde_js["ts"]
         )
         st.session_state.resultado_backend = res
-        st.rerun() # Forzamos la actualización inmediata de la interfaz
+        st.rerun()
