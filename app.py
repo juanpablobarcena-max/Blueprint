@@ -1,19 +1,22 @@
 import streamlit as st
 import streamlit.components.v1 as components
 
+# Configuración obligatoria a pantalla completa
 st.set_page_config(page_title="MidePlanos PRO", layout="wide", initial_sidebar_state="collapsed")
 
-# Todo el HTML/JS purgado de duplicidades y errores
+# Todo el HTML unificado con el parche de seguridad para Streamlit Cloud
 codigo_html = """
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MidePlanos PRO - Cloud Ready</title>
+    <title>MidePlanos PRO</title>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script async src="https://docs.opencv.org/4.8.0/opencv.js" onload="onOpenCvReady()" type="text/javascript"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
     <style>
         :root {
             --primary: #0ea5e9; --primary-hover: #0284c7; --primary-glow: rgba(14, 165, 233, 0.3);
@@ -25,7 +28,6 @@ codigo_html = """
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
         body { font-family: 'Inter', sans-serif; background-color: var(--bg-body); margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; color: var(--text-main); }
         .header { background: var(--bg-panel); backdrop-filter: blur(12px); padding: 6px 16px; border-bottom: 1px solid var(--border); z-index: 100; display: flex; flex-direction: column; gap: 6px; }
         .toolbar-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
@@ -35,8 +37,6 @@ codigo_html = """
         button:not(.tool-btn) { padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-weight: 600; font-size: 11px; transition: 0.2s; background: #1e293b; color: var(--text-main); }
         button:not(.tool-btn):hover { background: #334155; border-color: #475569; }
         .btn-action { background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%) !important; color: white !important; border-color: #1d4ed8 !important; }
-        .btn-close { background: rgba(239, 68, 68, 0.1) !important; color: #fca5a5 !important; border-color: #ef4444 !important; }
-        .btn-close:hover { background: var(--danger) !important; color: white !important; }
         .tool-trigger.active { background: #0ea5e9; color: white; border-color: #0ea5e9; box-shadow: 0 0 0 2px var(--primary-glow); }
         .tool-trigger.btn-success.active { background: var(--success); color: white; border-color: var(--success); }
         .tool-trigger.btn-magic { background: rgba(168, 85, 247, 0.1); color: #d8b4fe; border-color: rgba(168, 85, 247, 0.4); }
@@ -48,7 +48,6 @@ codigo_html = """
         .controls-left { display: flex; gap: 16px; align-items: center; }
         .pdf-controls { display: none; align-items: center; gap: 6px; border-right: 1px solid var(--border); padding-right: 12px; }
         .page-input { width: 35px; text-align: center; font-size: 12px; font-weight: 600; background: #0f172a; color: white; border: 1px solid var(--border); border-radius: 4px; padding: 4px; }
-        .page-input:focus { border-color: #0ea5e9; outline: none; }
         .zoom-controls { display: flex; align-items: center; gap: 6px; }
         .zoom-controls span { font-weight: 600; color: var(--text-muted); font-size: 11px; text-transform: uppercase; }
         .zoom-btn { padding: 2px 8px !important; border-radius: 4px !important; font-size: 13px !important;}
@@ -74,7 +73,7 @@ codigo_html = """
         .measurement-list { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
         .empty-state { text-align: center; color: var(--text-muted); font-size: 12px; margin-top: 20px; }
         .measure-item { border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; background: #1e293b; display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 8px; border-left: 4px solid var(--primary); transition: 0.2s; cursor: pointer; }
-        .measure-item:hover, .measure-item.highlighted { background: #334155; border-color: #64748b; transform: translateX(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .measure-item:hover { background: #334155; border-color: #64748b; transform: translateX(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
         .measure-item.selected { background: #1e293b; border-color: #0ea5e9; box-shadow: inset 0 0 0 1px #0ea5e9; }
         .color-picker { -webkit-appearance: none; border: none; width: 16px; height: 16px; border-radius: 4px; cursor: pointer; padding: 0; background: transparent; flex-shrink: 0;}
         .color-picker::-webkit-color-swatch-wrapper { padding: 0; }
@@ -87,7 +86,8 @@ codigo_html = """
         .btn-delete:hover { color: #fca5a5 !important; background: #7f1d1d !important; }
         .sidebar-footer { padding: 16px; border-top: 1px solid var(--border); background: rgba(15, 23, 42, 0.4); }
         .btn-export { width: 100%; background: linear-gradient(180deg, #10b981 0%, #059669 100%) !important; color: white !important; border-color: #059669 !important; padding: 10px !important; font-size: 13px; border-radius: 6px;}
-        /* MODAL CUSTOM */
+
+        /* MODAL CUSTOM (Soluciona bloqueos de la nube) */
         #customModal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15,23,42,0.8); z-index: 99999; display: none; justify-content: center; align-items: center; backdrop-filter: blur(4px); }
         .modal-content { background: #1e293b; padding: 24px; border-radius: 12px; border: 1px solid #334155; color: white; width: 320px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
         .modal-content h3 { margin-top: 0; font-size: 15px; font-weight: 600; color: #f8fafc; }
@@ -101,6 +101,7 @@ codigo_html = """
     </style>
 </head>
 <body>
+    <!-- Ventanas Emergentes Personalizadas -->
     <div id="customModal">
         <div class="modal-content">
             <h3 id="modalTitle"></h3>
@@ -111,15 +112,19 @@ codigo_html = """
             </div>
         </div>
     </div>
+
     <canvas id="loupeCanvas" width="120" height="120"></canvas>
+
     <div class="header">
         <div class="toolbar-row">
             <div class="toolbar-group">
                 <label class="file-label">📄 Nuevo <input type="file" id="imageLoader" accept="image/png, image/jpeg, image/webp, application/pdf"/></label>
-                <button id="btnSave" class="btn-action">💾 Guardar</button>
+                <button id="btnSave" class="btn-action">💾 Guardar Proyecto</button>
                 <label class="file-label" style="background: linear-gradient(180deg, #475569 0%, #334155 100%); border-color:#475569;">📂 Abrir <input type="file" id="projectLoader" accept=".json"/></label>
                 <button id="btnPrint" style="background:#0f172a; color:white; border-color:#334155;">🖨️ Imprimir Todo</button>
-                <button data-mode="printArea" class="tool-trigger" style="background:#1e293b; color:white; border-color:#334155; display:flex; align-items:center; gap:6px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-dasharray="5 5"><rect x="2" y="2" width="20" height="20" rx="2"/></svg> Área</button>
+                <button data-mode="printArea" class="tool-trigger" style="background:#1e293b; color:white; border-color:#334155; display:flex; align-items:center; gap:6px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-dasharray="5 5"><rect x="2" y="2" width="20" height="20" rx="2"/></svg> Área
+                </button>
             </div>
             <div class="toolbar-group tools-top">
                 <button data-mode="select" class="tool-trigger">↖️ Seleccionar</button>
@@ -144,6 +149,7 @@ codigo_html = """
             <div id="scaleInfo" class="scale-badge">ESCALA NO CALIBRADA</div>
         </div>
     </div>
+
     <div class="main-container">
         <div class="left-toolbar">
             <button data-mode="select" class="tool-btn tool-trigger" data-tooltip="Mover / Seleccionar">↖️</button><hr style="width: 50%; border: 0; border-top: 1px solid var(--border); margin: 0;">
@@ -166,8 +172,16 @@ codigo_html = """
             <div class="sidebar-footer"><button id="btnExport" class="btn-export">Descargar (.CSV)</button></div>
         </div>
     </div>
+
     <script>
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+        // SOLUCIÓN AL BLOQUEO DE SEGURIDAD (CORS) EN STREAMLIT CLOUD
+        try {
+            const pdfWorkerUrl = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+            const blob = new Blob([`importScripts('${pdfWorkerUrl}');`], { type: 'text/javascript' });
+            pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(blob);
+        } catch (e) {
+            console.warn("Usando motor PDF en modo seguro.");
+        }
 
         let cvReady = false;
         function onOpenCvReady() {
@@ -178,7 +192,6 @@ codigo_html = """
             document.getElementById('statusText').style.borderColor = 'rgba(16, 185, 129, 0.2)';
         }
 
-        // --- Modales ---
         function cAlert(msg, callback) {
             const m = document.getElementById('customModal'); m.style.display = 'flex';
             document.getElementById('modalTitle').innerText = msg;
@@ -195,21 +208,11 @@ codigo_html = """
             document.getElementById('modalBtnCancel').onclick = () => { m.style.display = 'none'; callback(null); };
             document.getElementById('modalBtnOk').onclick = () => { m.style.display = 'none'; callback(inp.value); };
         }
-        function cConfirm(msg, callback) {
-            const m = document.getElementById('customModal'); m.style.display = 'flex';
-            document.getElementById('modalTitle').innerText = msg;
-            document.getElementById('modalInput').style.display = 'none';
-            document.getElementById('modalBtnCancel').style.display = 'block';
-            document.getElementById('modalBtnCancel').onclick = () => { m.style.display = 'none'; callback(false); };
-            document.getElementById('modalBtnOk').onclick = () => { m.style.display = 'none'; callback(true); };
-        }
 
-        // --- Variables Únicas ---
         const canvas = document.getElementById('planCanvas');
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
         const canvasContainer = document.getElementById('canvasContainer');
         const imageLoader = document.getElementById('imageLoader');
-        const projectLoader = document.getElementById('projectLoader');
         const measurementListEl = document.getElementById('measurementList');
         const pageInput = document.getElementById('pageInput');
         const loupeCanvas = document.getElementById('loupeCanvas');
@@ -217,32 +220,11 @@ codigo_html = """
         const resizer = document.getElementById('sidebarResizer'); 
         const rightSidebar = document.getElementById('rightSidebar');
         
-        let isResizing = false;
-        let img = new Image(); 
-        let mode = 'none'; 
-        let currentZoom = 1; 
-        let measurementsByPage = {}; 
-        let counters = { line: 1, area: 1, circle: 1, arc: 1, dimension: 1 };
-        let scaleByPage = {}; 
-        let lastKnownScale = 0; 
-        let currentFileDataURL = null; 
-        let currentFileType = null; 
-        let currentFileName = null; 
-        let pdfDoc = null; 
-        let pageNum = 1; 
-        let isDrawing = false; 
-        let startX, startY, endX, endY; 
-        let currentPath = []; 
-        let tempPoint = null; 
-        let measureStep = 0; 
-        let isPanning = false; 
-        let panStartX, panStartY, panScrollLeft, panScrollTop; 
-        let draggingLabel = null; 
-        let dragOffsetX = 0, dragOffsetY = 0;
-        let editingMeasureId = null; 
-        let draggingPointIndex = -1; 
-        let highlightedMeasureId = null; 
-        let isLoupeActive = false;
+        let img = new Image(); let mode = 'none'; let currentZoom = 1; let measurementsByPage = {}; let counters = { line: 1, area: 1, circle: 1, arc: 1, dimension: 1 };
+        let scaleByPage = {}; let currentFileDataURL = null; let currentFileType = null; let currentFileName = null; let pdfDoc = null; let pageNum = 1; 
+        let isDrawing = false; let startX, startY, endX, endY; let currentPath = []; let tempPoint = null; let measureStep = 0; 
+        let isPanning = false; let panStartX, panStartY, panScrollLeft, panScrollTop; let draggingLabel = null; let dragOffsetX = 0, dragOffsetY = 0;
+        let editingMeasureId = null; let draggingPointIndex = -1; let highlightedMeasureId = null; let isResizing = false;
 
         function getDefaultColor(type) {
             if (type === 'straight') return '#0ea5e9'; if (type === 'dimension') return '#3b82f6'; if (type === 'polygonal') return '#f59e0b';
@@ -250,9 +232,10 @@ codigo_html = """
         }
         function hexToRgba(hex, alpha) {
             if(!hex) return `rgba(255,255,255,${alpha})`; hex = hex.replace('#', ''); if(hex.length === 3) hex = hex.split('').map(x => x + x).join('');
-            let r = parseInt(hex.substring(0,2), 16), g = parseInt(hex.substring(2,4), 16), b = parseInt(hex.substring(4,6), 16); return `rgba(${r},${g}, ${b},${alpha})`;
+            let r = parseInt(hex.substring(0,2), 16), g = parseInt(hex.substring(2,4), 16), b = parseInt(hex.substring(4,6), 16); return `rgba(${r}, ${g}, ${b}, ${alpha})`;
         }
         function getMousePos(e) { const rect = canvas.getBoundingClientRect(); return { x: (e.clientX - rect.left) * (canvas.width / rect.width), y: (e.clientY - rect.top) * (canvas.height / rect.height) }; }
+
         function getArcThrough3Points(p1, p2, p3) {
             let temp = p2.x*p2.x + p2.y*p2.y; let bc = (p1.x*p1.x + p1.y*p1.y - temp) / 2; let cd = (temp - p3.x*p3.x - p3.y*p3.y) / 2;
             let det = (p1.x - p2.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p2.y); if (Math.abs(det) < 1e-5) return null; 
@@ -309,45 +292,20 @@ codigo_html = """
             canvas.width = img.width; canvas.height = img.height; editingMeasureId = null; draggingPointIndex = -1;
             if (isNewDocument) { const cw = canvasContainer.clientWidth - 40; const ch = canvasContainer.clientHeight - 40; if (cw > 0 && ch > 0 && img.width > 0 && img.height > 0) { currentZoom = Math.min(cw / img.width, ch / img.height) * 0.95; currentZoom = Math.max(0.05, Math.min(currentZoom, 5)); } else currentZoom = 1; setTimeout(() => { canvasContainer.scrollLeft = 0; canvasContainer.scrollTop = 0; }, 10); } 
             applyZoom(); updateSidebar(); redraw();
-            if (!scaleByPage[pageNum] && lastKnownScale > 0) scaleByPage[pageNum] = lastKnownScale;
             const currentScale = scaleByPage[pageNum]; const txt = document.getElementById('statusText');
-            if (currentScale > 0) { txt.innerText = `Plano listo. Puedes medir.`; document.getElementById('scaleInfo').innerText = `ESC. PÁG. ${pageNum} (1m =${Math.round(currentScale)}px)`; document.getElementById('scaleInfo').className = "scale-badge calibrated"; if(mode === 'none' || mode === 'calibrate') setMode('select'); } 
+            if (currentScale > 0) { txt.innerText = `Plano listo. Puedes medir.`; document.getElementById('scaleInfo').innerText = `ESC. PÁG. ${pageNum} (1m = ${Math.round(currentScale)}px)`; document.getElementById('scaleInfo').className = "scale-badge calibrated"; if(mode === 'none' || mode === 'calibrate') setMode('select'); } 
             else { txt.innerText = "Calibra la escala para esta página."; document.getElementById('scaleInfo').innerText = "ESCALA NO CALIBRADA"; document.getElementById('scaleInfo').className = "scale-badge"; setMode('none'); }
         }
 
         imageLoader.addEventListener('change', function(e) {
             const file = e.target.files[0]; if (!file) return;
-            currentFileType = file.type; currentFileName = file.name; measurementsByPage = {}; counters = { line: 1, area: 1, circle: 1, arc: 1, dimension: 1 }; pageNum = 1; scaleByPage = {}; lastKnownScale = 0; document.getElementById('statusText').innerText = "Cargando plano...";
+            currentFileType = file.type; currentFileName = file.name; measurementsByPage = {}; counters = { line: 1, area: 1, circle: 1, arc: 1, dimension: 1 }; pageNum = 1; scaleByPage = {}; document.getElementById('statusText').innerText = "Cargando plano...";
             const reader = new FileReader(); reader.onload = function(event) { currentFileDataURL = event.target.result; loadDocumentFromDataURL(true); }; reader.readAsDataURL(file); e.target.value = ""; 
         });
 
         document.getElementById('btnPrev').onclick = () => { if (pageNum > 1) { pageNum--; renderPage(pageNum, false); }};
         document.getElementById('btnNext').onclick = () => { if (pageNum < pdfDoc.numPages) { pageNum++; renderPage(pageNum, false); }};
-        
-        document.getElementById('btnSave').onclick = async () => {
-            if (!currentFileDataURL) return cAlert("No hay proyecto para guardar.");
-            const saveData = { fileData: currentFileDataURL, fileType: currentFileType, fileName: currentFileName, scaleByPage: scaleByPage, lastKnownScale: lastKnownScale, counters: counters, measurementsByPage: {} };
-            for (let page in measurementsByPage) { saveData.measurementsByPage[page] = measurementsByPage[page].map(m => { let clone = { ...m }; if (clone.img) { clone.imgSrc = clone.img.src; delete clone.img; } return clone; }); }
-            const jsonString = JSON.stringify(saveData); const suggestedName = `Proyecto_${currentFileName ? currentFileName.split('.')[0] : 'MidePlanos'}.json`;
-            if (window.showSaveFilePicker) { try { const handle = await window.showSaveFilePicker({ suggestedName: suggestedName, types: [{ description: 'Archivo MidePlanos', accept: {'application/json': ['.json']} }] }); const writable = await handle.createWritable(); await writable.write(jsonString); await writable.close(); } catch (err) { if (err.name !== 'AbortError') fallbackSave(jsonString, suggestedName); } } 
-            else fallbackSave(jsonString, suggestedName);
-        };
-        function fallbackSave(jsonString, fileName) { const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(jsonString); const link = document.createElement("a"); link.href = dataStr; link.download = fileName; document.body.appendChild(link); link.click(); document.body.removeChild(link); }
-
-        projectLoader.addEventListener('change', function(e) {
-            const file = e.target.files[0]; if (!file) return; const reader = new FileReader();
-            reader.onload = function(event) {
-                try {
-                    const json = JSON.parse(event.target.result); currentFileDataURL = json.fileData; currentFileType = json.fileType; currentFileName = json.fileName; scaleByPage = json.scaleByPage || {}; lastKnownScale = json.lastKnownScale || 0; counters = json.counters || { line: 1, area: 1, circle: 1, arc: 1, dimension: 1 };
-                    if (json.pixelsPerMeter && Object.keys(scaleByPage).length === 0) { scaleByPage[1] = json.pixelsPerMeter; lastKnownScale = json.pixelsPerMeter; }
-                    measurementsByPage = {}; const promises = [];
-                    for (let page in json.measurementsByPage) {
-                        measurementsByPage[page] = [];
-                        json.measurementsByPage[page].forEach(m => { if ((m.type === 'autoArea' || m.type === 'autoLine') && m.imgSrc) { const prom = new Promise((resolve) => { const newImg = new Image(); newImg.onload = () => { m.img = newImg; measurementsByPage[page].push(m); resolve(); }; newImg.src = m.imgSrc; }); promises.push(prom); } else measurementsByPage[page].push(m); });
-                    } Promise.all(promises).then(() => { pageNum = 1; loadDocumentFromDataURL(true); }); 
-                } catch(err) { cAlert("Error al leer archivo."); }
-            }; reader.readAsText(file); e.target.value = "";
-        });
+        pageInput.addEventListener('change', (e) => { if (!pdfDoc) return; let val = parseInt(e.target.value); if (isNaN(val) || val < 1) val = 1; if (val > pdfDoc.numPages) val = pdfDoc.numPages; if (val !== pageNum) { pageNum = val; renderPage(pageNum, false); } else pageInput.value = pageNum; });
 
         document.querySelectorAll('.tool-trigger').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -394,7 +352,7 @@ codigo_html = """
         function updateSidebar() {
             measurementListEl.innerHTML = ''; const list = measurementsByPage[pageNum] || []; if (list.length === 0) { measurementListEl.innerHTML = '<div class="empty-state">Aún no has medido nada.</div>'; return; }
             list.forEach(m => {
-                const item = document.createElement('div'); item.className = `measure-item type-${m.type.toLowerCase()}${m.id === editingMeasureId ? 'selected' : ''}`; item.style.borderLeftColor = m.color;
+                const item = document.createElement('div'); item.className = `measure-item type-${m.type.toLowerCase()} ${m.id === editingMeasureId ? 'selected' : ''}`; item.style.borderLeftColor = m.color;
                 item.onmouseenter = () => { item.classList.add('highlighted'); highlightMeasurement(m.id); }; item.onmouseleave = () => { item.classList.remove('highlighted'); clearHighlight(); };
                 item.onclick = (ev) => { if(ev.target.tagName !== 'INPUT' && ev.target.tagName !== 'BUTTON') { editingMeasureId = m.id; if(mode !== 'select') setMode('select'); else { updateSidebar(); redraw(); } } };
                 let valStr = ""; if (['straight', 'polygonal', 'autoLine', 'dimension'].includes(m.type)) { valStr = `<span>${m.valM}</span>&nbsp;m`; } else if (m.type === 'arc' || m.type === 'circle') { valStr = `<span>${m.type==='arc'? m.valM : m.valM2}</span>&nbsp;${m.type==='arc'?'m':'m²'}`; } else { valStr = `<span>${m.valM2}</span>&nbsp;m²`; }
@@ -411,7 +369,6 @@ codigo_html = """
         };
 
         function executeAutoMeasurement(startX, startY, autoMode) {
-            document.getElementById('statusText').innerText = "🧠 Procesando topología y sombreados con OpenCV...";
             setTimeout(() => {
                 try {
                     let src = cv.imread(canvas); let ctxData = ctx.getImageData(startX, startY, 1, 1).data; let r = ctxData[0], g = ctxData[1], b = ctxData[2];
@@ -436,8 +393,8 @@ codigo_html = """
                         let M = cv.moments(maxCnt); let cx = M.m10 / M.m00, cy = M.m01 / M.m00; let tempCanvas = document.createElement('canvas'); cv.imshow(tempCanvas, overlay); let resImg = new Image(); resImg.onload = () => { addMeasurement({ type: 'autoLine', img: resImg, cx, cy, valM: (maxLen / (scaleByPage[pageNum] || 1)).toFixed(2), valM2: null }); }; resImg.src = tempCanvas.toDataURL();
                         contours.delete(); hierarchy.delete(); drawCnts.delete(); overlay.delete();
                     }
-                    src.delete(); low.delete(); high.delete(); mask.delete(); document.getElementById('statusText').innerText = "✅ Operación completada.";
-                } catch(err) { cAlert("No se pudo detectar el patrón correctamente. Haz clic en una zona definida."); setMode('select'); }
+                    src.delete(); low.delete(); high.delete(); mask.delete(); setMode('select');
+                } catch(err) { cAlert("No se detectó un patrón. Haz clic en una zona definida."); setMode('select'); }
             }, 50); 
         }
 
@@ -492,14 +449,12 @@ codigo_html = """
             if (isPanning) { isPanning = false; canvas.style.cursor = (mode === 'select') ? 'default' : 'grab'; return; }
             if (mode === 'printArea' && isDrawing) { isDrawing = false; const {x, y} = getMousePos(e); endX = x; endY = y; const rx = Math.min(startX, endX); const ry = Math.min(startY, endY); const rw = Math.abs(endX - startX); const rh = Math.abs(endY - startY); redraw(); if (rw > 10 && rh > 10) printSelectedArea(rx, ry, rw, rh); setMode('select'); }
         });
-        
-        canvas.addEventListener('mouseleave', () => { loupeCanvas.style.display = 'none'; isPanning = false; draggingPointIndex = -1; draggingLabel = null; });
 
         function finishLineTool() {
             isDrawing = false; measureStep = 0; const dist = Math.hypot(endX - startX, endY - startY); if (dist < 5) { currentPath = []; redraw(); return; }
             if (mode === 'calibrate') {
                 cPrompt("¿Cuántos metros reales tiene esta línea?", (r) => {
-                    if (r) { r = parseFloat(r.replace(',', '.')); if (!isNaN(r) && r > 0) { scaleByPage[pageNum] = dist / r; lastKnownScale = scaleByPage[pageNum]; document.getElementById('scaleInfo').innerText = `ESC. PÁG. ${pageNum} (1m =${Math.round(scaleByPage[pageNum])}px)`; document.getElementById('scaleInfo').className = "scale-badge calibrated"; cAlert(`¡Escala guardada!`); setMode('distance'); } else { cAlert("Valor no válido."); } }
+                    if (r) { r = parseFloat(r.replace(',', '.')); if (!isNaN(r) && r > 0) { scaleByPage[pageNum] = dist / r; document.getElementById('scaleInfo').innerText = `ESC. PÁG. ${pageNum} (1m = ${Math.round(scaleByPage[pageNum])}px)`; document.getElementById('scaleInfo').className = "scale-badge calibrated"; cAlert(`¡Escala guardada!`); setMode('distance'); } else { cAlert("Valor no válido."); } }
                     currentPath = []; redraw();
                 });
             } else if (mode === 'distance') { addMeasurement({ type: 'straight', cx: (startX+endX)/2, cy: (startY+endY)/2, points: [...currentPath], valM: (dist/scaleByPage[pageNum]).toFixed(2), valM2: null }); currentPath = []; redraw(); } 
@@ -575,5 +530,4 @@ codigo_html = """
 </html>
 """
 
-# Inyectar el visor en la nube ocupando el máximo espacio
 components.html(codigo_html, height=900, scrolling=True)
