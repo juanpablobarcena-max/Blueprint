@@ -104,7 +104,7 @@
         .sidebar-footer { padding: 16px; border-top: 1px solid var(--border); background: rgba(15, 23, 42, 0.4); }
         .btn-export { width: 100%; background: linear-gradient(180deg, #10b981 0%, #059669 100%) !important; color: white !important; border-color: #059669 !important; padding: 10px !important; font-size: 13px; border-radius: 6px;}
 
-        /* MODALES CUSTOM PARA STREAMLIT (Sustituyen a alert() y prompt() bloqueados) */
+        /* MODALES CUSTOM PARA STREAMLIT */
         #customModal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15,23,42,0.8); z-index: 99999; display: none; justify-content: center; align-items: center; backdrop-filter: blur(4px); }
         .modal-content { background: #1e293b; padding: 24px; border-radius: 12px; border: 1px solid #334155; color: white; width: 320px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
         .modal-content h3 { margin-top: 0; font-size: 15px; font-weight: 600; color: #f8fafc; }
@@ -119,7 +119,7 @@
 </head>
 <body>
 
-    <!-- MODAL CUSTOM PARA ALERTAS Y PROMPTS (ByPass Iframe Security) -->
+    <!-- MODAL CUSTOM -->
     <div id="customModal">
         <div class="modal-content">
             <h3 id="modalTitle"></h3>
@@ -140,7 +140,6 @@
                 <label class="file-label">📄 Nuevo <input type="file" id="imageLoader" accept="image/png, image/jpeg, image/webp, application/pdf"/></label>
                 <button id="btnSave" class="btn-action">💾 Guardar Proyecto</button>
                 <label class="file-label" style="background: linear-gradient(180deg, #475569 0%, #334155 100%); border-color:#475569;">📂 Abrir <input type="file" id="projectLoader" accept=".json"/></label>
-                
                 <button id="btnPrint" style="background:#0f172a; color:white; border-color:#334155;">🖨️ Imprimir Todo</button>
                 <button data-mode="printArea" class="tool-trigger" style="background:#1e293b; color:white; border-color:#334155; display:flex; align-items:center; gap:6px;">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-dasharray="5 5"><rect x="2" y="2" width="20" height="20" rx="2"/></svg> Imprimir Área
@@ -159,10 +158,7 @@
                 <button data-mode="autoLine" class="tool-trigger btn-magic">🪄 Auto-Línea</button>
                 <button data-mode="autoArea" class="tool-trigger btn-magic">🪄 Auto-Área</button>
             </div>
-
-            <div class="toolbar-group">
-                <button id="btnToggleSidebar" style="background:#334155; color:white; border-color:#475569;">🗂️ Panel</button>
-            </div>
+            <div class="toolbar-group"><button id="btnToggleSidebar" style="background:#334155; color:white; border-color:#475569;">🗂️ Panel</button></div>
         </div>
 
         <div class="toolbar-row controls-bar">
@@ -208,30 +204,21 @@
         </div>
 
         <div class="workspace">
-            <div class="canvas-container" id="canvasContainer">
-                <canvas id="planCanvas"></canvas>
-            </div>
+            <div class="canvas-container" id="canvasContainer"><canvas id="planCanvas"></canvas></div>
         </div>
 
         <div class="resizer" id="sidebarResizer"></div>
 
         <div class="sidebar" id="rightSidebar">
-            <div class="sidebar-header">
-                <h3>Mediciones <span id="sbPageTitle" style="color:var(--text-muted); font-size:11px;"></span></h3>
-            </div>
-            <div class="measurement-list" id="measurementList">
-                <div class="empty-state">No hay medidas en esta página.</div>
-            </div>
-            <div class="sidebar-footer">
-                <button id="btnExport" class="btn-export">Descargar Excel (.CSV)</button>
-            </div>
+            <div class="sidebar-header"><h3>Mediciones <span id="sbPageTitle" style="color:var(--text-muted); font-size:11px;"></span></h3></div>
+            <div class="measurement-list" id="measurementList"><div class="empty-state">No hay medidas en esta página.</div></div>
+            <div class="sidebar-footer"><button id="btnExport" class="btn-export">Descargar Excel (.CSV)</button></div>
         </div>
     </div>
 
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
-        // --- SISTEMA OPENCV.JS ---
         let cvReady = false;
         function onOpenCvReady() {
             cvReady = true;
@@ -241,7 +228,7 @@
             document.getElementById('statusText').style.borderColor = 'rgba(16, 185, 129, 0.2)';
         }
 
-        // --- FUNCIONES CUSTOM MODAL (Reemplazan alert, prompt y confirm) ---
+        // --- FUNCIONES CUSTOM MODAL ---
         function cAlert(msg, callback) {
             const m = document.getElementById('customModal'); m.style.display = 'flex';
             document.getElementById('modalTitle').innerText = msg;
@@ -274,164 +261,81 @@
         const projectLoader = document.getElementById('projectLoader');
         const measurementListEl = document.getElementById('measurementList');
         const pageInput = document.getElementById('pageInput');
-        
         const loupeCanvas = document.getElementById('loupeCanvas');
         const loupeCtx = loupeCanvas.getContext('2d');
         
-        let img = new Image();
-        let mode = 'none'; 
-        let currentZoom = 1;
-        let measurementsByPage = {};
-        let counters = { line: 1, area: 1, circle: 1, arc: 1, dimension: 1 };
-        
-        let scaleByPage = {};
-        let lastKnownScale = 0; 
+        let img = new Image(); let mode = 'none'; let currentZoom = 1; let measurementsByPage = {}; let counters = { line: 1, area: 1, circle: 1, arc: 1, dimension: 1 };
+        let scaleByPage = {}; let lastKnownScale = 0; let currentFileDataURL = null; let currentFileType = null; let currentFileName = null; let pdfDoc = null; let pageNum = 1; 
 
-        let currentFileDataURL = null; let currentFileType = null; let currentFileName = null;
-        let pdfDoc = null; let pageNum = 1; 
-
-        let isDrawing = false; 
-        let startX, startY, endX, endY;
-        let currentPath = []; 
-        let tempPoint = null;
-        let measureStep = 0; 
-
-        let isPanning = false; let panStartX, panStartY, panScrollLeft, panScrollTop;
-        let draggingLabel = null; let dragOffsetX = 0; let dragOffsetY = 0;
-        let editingMeasureId = null; let draggingPointIndex = -1; let highlightedMeasureId = null;
+        let isDrawing = false; let startX, startY, endX, endY; let currentPath = []; let tempPoint = null; let measureStep = 0; 
+        let isPanning = false; let panStartX, panStartY, panScrollLeft, panScrollTop; let draggingLabel = null; let dragOffsetX = 0; let dragOffsetY = 0;
+        let editingMeasureId = null; let draggingPointIndex = -1; let highlightedMeasureId = null; let isLoupeActive = false;
 
         function getDefaultColor(type) {
-            if (type === 'straight') return '#0ea5e9';
-            if (type === 'dimension') return '#3b82f6';
-            if (type === 'polygonal') return '#f59e0b';
-            if (type === 'area' || type === 'autoArea') return '#10b981';
-            if (type === 'circle') return '#ec4899';
-            if (type === 'arc') return '#14b8a6';
-            if (type === 'autoLine') return '#a855f7';
-            return '#ffffff';
+            if (type === 'straight') return '#0ea5e9'; if (type === 'dimension') return '#3b82f6'; if (type === 'polygonal') return '#f59e0b';
+            if (type === 'area' || type === 'autoArea') return '#10b981'; if (type === 'circle') return '#ec4899'; if (type === 'arc') return '#14b8a6'; if (type === 'autoLine') return '#a855f7'; return '#ffffff';
         }
-
         function hexToRgba(hex, alpha) {
-            if(!hex) return `rgba(255,255,255,${alpha})`; hex = hex.replace('#', '');
-            if(hex.length === 3) hex = hex.split('').map(x => x + x).join('');
-            let r = parseInt(hex.substring(0,2), 16), g = parseInt(hex.substring(2,4), 16), b = parseInt(hex.substring(4,6), 16);
-            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+            if(!hex) return `rgba(255,255,255,${alpha})`; hex = hex.replace('#', ''); if(hex.length === 3) hex = hex.split('').map(x => x + x).join('');
+            let r = parseInt(hex.substring(0,2), 16), g = parseInt(hex.substring(2,4), 16), b = parseInt(hex.substring(4,6), 16); return `rgba(${r}, ${g}, ${b}, ${alpha})`;
         }
-
-        function getMousePos(e) { 
-            const rect = canvas.getBoundingClientRect(); 
-            return { x: (e.clientX - rect.left) * (canvas.width / rect.width), y: (e.clientY - rect.top) * (canvas.height / rect.height) }; 
-        }
-
+        function getMousePos(e) { const rect = canvas.getBoundingClientRect(); return { x: (e.clientX - rect.left) * (canvas.width / rect.width), y: (e.clientY - rect.top) * (canvas.height / rect.height) }; }
         function getArcThrough3Points(p1, p2, p3) {
             let temp = p2.x*p2.x + p2.y*p2.y; let bc = (p1.x*p1.x + p1.y*p1.y - temp) / 2; let cd = (temp - p3.x*p3.x - p3.y*p3.y) / 2;
-            let det = (p1.x - p2.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p2.y);
-            if (Math.abs(det) < 1e-5) return null; 
+            let det = (p1.x - p2.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p2.y); if (Math.abs(det) < 1e-5) return null; 
             let cx = (bc * (p2.y - p3.y) - cd * (p1.y - p2.y)) / det; let cy = ((p1.x - p2.x) * cd - (p2.x - p3.x) * bc) / det; let r = Math.hypot(cx - p1.x, cy - p1.y);
             let startAngle = Math.atan2(p1.y - cy, p1.x - cx); let endAngle = Math.atan2(p3.y - cy, p3.x - cx);
-            let cross = (p2.x - p1.x) * (p3.y - p2.y) - (p2.y - p1.y) * (p3.x - p2.x);
-            let anticlockwise = cross < 0; 
-            let sweepAngle = endAngle - startAngle;
-            if (anticlockwise && sweepAngle > 0) sweepAngle -= 2 * Math.PI; if (!anticlockwise && sweepAngle < 0) sweepAngle += 2 * Math.PI;
+            let cross = (p2.x - p1.x) * (p3.y - p2.y) - (p2.y - p1.y) * (p3.x - p2.x); let anticlockwise = cross < 0; 
+            let sweepAngle = endAngle - startAngle; if (anticlockwise && sweepAngle > 0) sweepAngle -= 2 * Math.PI; if (!anticlockwise && sweepAngle < 0) sweepAngle += 2 * Math.PI;
             return { cx, cy, r, startAngle, endAngle, anticlockwise, length: Math.abs(sweepAngle) * r };
         }
-
         function getCADOffset(p1, p2, p3) {
-            let dx = p2.x - p1.x; let dy = p2.y - p1.y; let len = Math.hypot(dx, dy);
-            if (len === 0) return { d: 0, nx: 0, ny: 0, dx: 0, dy: 0, len: 0 };
-            let nx = -dy / len; let ny = dx / len; let d = (p3.x - p1.x) * nx + (p3.y - p1.y) * ny;
-            return { d, nx, ny, dx, dy, len };
+            let dx = p2.x - p1.x; let dy = p2.y - p1.y; let len = Math.hypot(dx, dy); if (len === 0) return { d: 0, nx: 0, ny: 0, dx: 0, dy: 0, len: 0 };
+            let nx = -dy / len; let ny = dx / len; let d = (p3.x - p1.x) * nx + (p3.y - p1.y) * ny; return { d, nx, ny, dx, dy, len };
         }
 
-        const resizer = document.getElementById('sidebarResizer');
-        const rightSidebar = document.getElementById('rightSidebar');
-        let isResizing = false;
+        const resizer = document.getElementById('sidebarResizer'); const rightSidebar = document.getElementById('rightSidebar'); let isResizing = false;
         resizer.addEventListener('mousedown', () => { isResizing = true; document.body.style.cursor = 'ew-resize'; resizer.classList.add('resizing'); });
         document.addEventListener('mousemove', (e) => { if (!isResizing) return; const newWidth = document.body.clientWidth - e.clientX; if (newWidth > 200 && newWidth < 600) rightSidebar.style.width = newWidth + 'px'; });
         document.addEventListener('mouseup', () => { if (isResizing) { isResizing = false; document.body.style.cursor = 'default'; resizer.classList.remove('resizing'); } });
+        document.getElementById('btnToggleSidebar').onclick = () => { if (rightSidebar.style.display === 'none') { rightSidebar.style.display = 'flex'; resizer.style.display = 'block'; } else { rightSidebar.style.display = 'none'; resizer.style.display = 'none'; } };
 
-        document.getElementById('btnPrint').onclick = () => {
-            if (!img.src) return cAlert("Sube un plano antes de imprimir.");
-            openPrintWindow(canvas.toDataURL('image/png'));
-        };
+        document.getElementById('btnPrint').onclick = () => { if (!img.src) return cAlert("Sube un plano antes de imprimir."); openPrintWindow(canvas.toDataURL('image/png')); };
+        function printSelectedArea(x, y, w, h) { const tCanvas = document.createElement('canvas'); tCanvas.width = w; tCanvas.height = h; const tCtx = tCanvas.getContext('2d'); tCtx.drawImage(canvas, x, y, w, h, 0, 0, w, h); openPrintWindow(tCanvas.toDataURL('image/png')); }
+        function openPrintWindow(dataUrl) { const printWindow = window.open('', '_blank'); printWindow.document.write(`<html><head><title>Imprimir</title><style>@page{size:auto;margin:0mm;}body{margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#fff;}img{max-width:100vw;max-height:100vh;object-fit:contain;}</style></head><body><img src="${dataUrl}" onload="setTimeout(()=>{window.print();window.close();},250);" /></body></html>`); printWindow.document.close(); }
 
-        function printSelectedArea(x, y, w, h) {
-            const tCanvas = document.createElement('canvas'); tCanvas.width = w; tCanvas.height = h;
-            const tCtx = tCanvas.getContext('2d'); tCtx.drawImage(canvas, x, y, w, h, 0, 0, w, h);
-            openPrintWindow(tCanvas.toDataURL('image/png'));
-        }
-
-        function openPrintWindow(dataUrl) {
-            const printWindow = window.open('', '_blank');
-            printWindow.document.write(`<html><head><title>Imprimir</title><style>@page{size:auto;margin:0mm;}body{margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#fff;}img{max-width:100vw;max-height:100vh;object-fit:contain;}</style></head><body><img src="${dataUrl}" onload="setTimeout(()=>{window.print();window.close();},250);" /></body></html>`);
-            printWindow.document.close();
-        }
-
-        function applyZoom() {
-            if(canvas.width === 0) return;
-            canvas.style.width = (canvas.width * currentZoom) + 'px'; canvas.style.height = (canvas.height * currentZoom) + 'px';
-            document.getElementById('zoomLevel').innerText = Math.round(currentZoom * 100) + '%';
-        }
+        function applyZoom() { if(canvas.width === 0) return; canvas.style.width = (canvas.width * currentZoom) + 'px'; canvas.style.height = (canvas.height * currentZoom) + 'px'; document.getElementById('zoomLevel').innerText = Math.round(currentZoom * 100) + '%'; }
         document.getElementById('btnZoomIn').onclick = () => { currentZoom *= 1.2; applyZoom(); };
         document.getElementById('btnZoomOut').onclick = () => { currentZoom /= 1.2; applyZoom(); };
         canvasContainer.addEventListener('wheel', (e) => { if (e.ctrlKey || e.metaKey) { e.preventDefault(); currentZoom *= (e.deltaY < 0 ? 1.1 : 0.9); currentZoom = Math.max(0.05, Math.min(currentZoom, 10)); applyZoom(); } }, { passive: false });
 
         function updateLoupe(e, x, y) {
             if (!img.src) return;
-            loupeCanvas.style.display = 'block';
-            let loupeSize = 120; let offset = 20; 
-            let leftPos = e.clientX + offset; let topPos = e.clientY + offset;
-
-            if (leftPos + loupeSize > window.innerWidth) leftPos = e.clientX - loupeSize - offset;
-            if (topPos + loupeSize > window.innerHeight) topPos = e.clientY - loupeSize - offset;
-            
+            loupeCanvas.style.display = 'block'; let loupeSize = 120; let offset = 20; let leftPos = e.clientX + offset; let topPos = e.clientY + offset;
+            if (leftPos + loupeSize > window.innerWidth) leftPos = e.clientX - loupeSize - offset; if (topPos + loupeSize > window.innerHeight) topPos = e.clientY - loupeSize - offset;
             loupeCanvas.style.left = leftPos + 'px'; loupeCanvas.style.top = topPos + 'px';
-            
-            loupeCtx.fillStyle = '#ffffff'; loupeCtx.fillRect(0, 0, 120, 120);
-            const zoomFactor = 2.5; const srcSize = 120 / (currentZoom * zoomFactor);
-            loupeCtx.drawImage(canvas, x - srcSize/2, y - srcSize/2, srcSize, srcSize, 0, 0, 120, 120);
-            loupeCtx.beginPath(); loupeCtx.moveTo(0, 60); loupeCtx.lineTo(120, 60); loupeCtx.moveTo(60, 0); loupeCtx.lineTo(60, 120);
-            loupeCtx.strokeStyle = 'rgba(239, 68, 68, 0.8)'; loupeCtx.lineWidth = 1.5; loupeCtx.stroke();
+            loupeCtx.fillStyle = '#ffffff'; loupeCtx.fillRect(0, 0, 120, 120); const zoomFactor = 2.5; const srcSize = 120 / (currentZoom * zoomFactor);
+            loupeCtx.drawImage(canvas, x - srcSize/2, y - srcSize/2, srcSize, srcSize, 0, 0, 120, 120); loupeCtx.beginPath(); loupeCtx.moveTo(0, 60); loupeCtx.lineTo(120, 60); loupeCtx.moveTo(60, 0); loupeCtx.lineTo(60, 120); loupeCtx.strokeStyle = 'rgba(239, 68, 68, 0.8)'; loupeCtx.lineWidth = 1.5; loupeCtx.stroke();
         }
 
         function loadDocumentFromDataURL(isNew = false) {
             if (currentFileType === 'application/pdf') {
-                const base64Index = currentFileDataURL.indexOf(';base64,') + 8;
-                const rawBase64 = currentFileDataURL.substring(base64Index);
-                const raw = window.atob(rawBase64); const array = new Uint8Array(raw.length);
+                const base64Index = currentFileDataURL.indexOf(';base64,') + 8; const rawBase64 = currentFileDataURL.substring(base64Index); const raw = window.atob(rawBase64); const array = new Uint8Array(raw.length);
                 for(let i=0; i<raw.length; i++) array[i] = raw.charCodeAt(i);
-                pdfjsLib.getDocument(array).promise.then(function(pdf) {
-                    pdfDoc = pdf; document.getElementById('pdfControls').style.display = 'flex'; 
-                    document.getElementById('pageTotal').textContent = pdfDoc.numPages; pageInput.max = pdfDoc.numPages; renderPage(pageNum, isNew);
-                }).catch(err => { cAlert("Error al abrir PDF."); console.error(err); });
-            } else {
-                document.getElementById('pdfControls').style.display = 'none'; pdfDoc = null; document.getElementById('sbPageTitle').textContent = `(Imagen)`;
-                img.onload = function() { resetCanvasEnvironment(isNew); }; img.src = currentFileDataURL;
-            }
+                pdfjsLib.getDocument(array).promise.then(function(pdf) { pdfDoc = pdf; document.getElementById('pdfControls').style.display = 'flex'; document.getElementById('pageTotal').textContent = pdfDoc.numPages; pageInput.max = pdfDoc.numPages; renderPage(pageNum, isNew); }).catch(err => { cAlert("Error al abrir PDF."); console.error(err); });
+            } else { document.getElementById('pdfControls').style.display = 'none'; pdfDoc = null; document.getElementById('sbPageTitle').textContent = `(Imagen)`; img.onload = function() { resetCanvasEnvironment(isNew); }; img.src = currentFileDataURL; }
         }
 
         function renderPage(num, isNew = false) {
             pdfDoc.getPage(num).then(function(page) {
-                const viewport = page.getViewport({ scale: 2.0 });
-                const tempCanvas = document.createElement('canvas'); const tempCtx = tempCanvas.getContext('2d');
-                tempCanvas.height = viewport.height; tempCanvas.width = viewport.width;
-                page.render({canvasContext: tempCtx, viewport: viewport}).promise.then(function() {
-                    img.onload = function() { resetCanvasEnvironment(isNew); }
-                    img.src = tempCanvas.toDataURL('image/png');
-                    pageInput.value = pageNum; document.getElementById('sbPageTitle').textContent = `(Pág. ${pageNum})`;
-                });
+                const viewport = page.getViewport({ scale: 2.0 }); const tempCanvas = document.createElement('canvas'); const tempCtx = tempCanvas.getContext('2d'); tempCanvas.height = viewport.height; tempCanvas.width = viewport.width;
+                page.render({canvasContext: tempCtx, viewport: viewport}).promise.then(function() { img.onload = function() { resetCanvasEnvironment(isNew); }; img.src = tempCanvas.toDataURL('image/png'); pageInput.value = pageNum; document.getElementById('sbPageTitle').textContent = `(Pág. ${pageNum})`; });
             });
         }
         
         function resetCanvasEnvironment(isNewDocument) {
-            canvas.width = img.width; canvas.height = img.height;
-            editingMeasureId = null; draggingPointIndex = -1;
-            
-            if (isNewDocument) {
-                const cw = canvasContainer.clientWidth - 40; const ch = canvasContainer.clientHeight - 40;
-                if (cw > 0 && ch > 0 && img.width > 0 && img.height > 0) { currentZoom = Math.min(cw / img.width, ch / img.height) * 0.95; currentZoom = Math.max(0.05, Math.min(currentZoom, 5)); } else currentZoom = 1;
-                setTimeout(() => { canvasContainer.scrollLeft = 0; canvasContainer.scrollTop = 0; }, 10);
-            } 
+            canvas.width = img.width; canvas.height = img.height; editingMeasureId = null; draggingPointIndex = -1;
+            if (isNewDocument) { const cw = canvasContainer.clientWidth - 40; const ch = canvasContainer.clientHeight - 40; if (cw > 0 && ch > 0 && img.width > 0 && img.height > 0) { currentZoom = Math.min(cw / img.width, ch / img.height) * 0.95; currentZoom = Math.max(0.05, Math.min(currentZoom, 5)); } else currentZoom = 1; setTimeout(() => { canvasContainer.scrollLeft = 0; canvasContainer.scrollTop = 0; }, 10); } 
             applyZoom(); updateSidebar(); redraw();
             if (!scaleByPage[pageNum] && lastKnownScale > 0) scaleByPage[pageNum] = lastKnownScale;
             const currentScale = scaleByPage[pageNum]; const txt = document.getElementById('statusText');
@@ -441,8 +345,7 @@
 
         imageLoader.addEventListener('change', function(e) {
             const file = e.target.files[0]; if (!file) return;
-            currentFileType = file.type; currentFileName = file.name; measurementsByPage = {}; counters = { line: 1, area: 1, circle: 1, arc: 1, dimension: 1 }; pageNum = 1; scaleByPage = {}; lastKnownScale = 0; 
-            document.getElementById('statusText').innerText = "Cargando plano...";
+            currentFileType = file.type; currentFileName = file.name; measurementsByPage = {}; counters = { line: 1, area: 1, circle: 1, arc: 1, dimension: 1 }; pageNum = 1; scaleByPage = {}; lastKnownScale = 0; document.getElementById('statusText').innerText = "Cargando plano...";
             const reader = new FileReader(); reader.onload = function(event) { currentFileDataURL = event.target.result; loadDocumentFromDataURL(true); }; reader.readAsDataURL(file); e.target.value = ""; 
         });
 
@@ -453,9 +356,7 @@
             cConfirm("¿Cerrar el proyecto actual? Se perderán los cambios no guardados.", (res) => {
                 if(!res) return;
                 pdfDoc = null; pageNum = 1; img = new Image(); measurementsByPage = {}; scaleByPage = {}; lastKnownScale = 0; currentZoom = 1; counters = { line: 1, area: 1, circle: 1, arc: 1, dimension: 1 }; currentFileDataURL = null; currentFileType = null; currentFileName = null;
-                document.getElementById('statusText').innerText = "Sube un plano o abre un proyecto para empezar.";
-                document.getElementById('scaleInfo').innerText = "ESCALA NO CALIBRADA"; document.getElementById('scaleInfo').className = "scale-badge"; document.getElementById('pdfControls').style.display = 'none'; document.getElementById('sbPageTitle').textContent = ``;
-                editingMeasureId = null; ctx.clearRect(0, 0, canvas.width, canvas.height); canvas.width = 0; canvas.height = 0; updateSidebar(); setMode('none'); 
+                document.getElementById('statusText').innerText = "Sube un plano o abre un proyecto para empezar."; document.getElementById('scaleInfo').innerText = "ESCALA NO CALIBRADA"; document.getElementById('scaleInfo').className = "scale-badge"; document.getElementById('pdfControls').style.display = 'none'; document.getElementById('sbPageTitle').textContent = ``; editingMeasureId = null; ctx.clearRect(0, 0, canvas.width, canvas.height); canvas.width = 0; canvas.height = 0; updateSidebar(); setMode('none'); 
             });
         };
 
@@ -473,15 +374,12 @@
             const file = e.target.files[0]; if (!file) return; const reader = new FileReader();
             reader.onload = function(event) {
                 try {
-                    const json = JSON.parse(event.target.result); currentFileDataURL = json.fileData; currentFileType = json.fileType; currentFileName = json.fileName; 
-                    scaleByPage = json.scaleByPage || {}; lastKnownScale = json.lastKnownScale || 0; counters = json.counters || { line: 1, area: 1, circle: 1, arc: 1, dimension: 1 };
+                    const json = JSON.parse(event.target.result); currentFileDataURL = json.fileData; currentFileType = json.fileType; currentFileName = json.fileName; scaleByPage = json.scaleByPage || {}; lastKnownScale = json.lastKnownScale || 0; counters = json.counters || { line: 1, area: 1, circle: 1, arc: 1, dimension: 1 };
                     if (json.pixelsPerMeter && Object.keys(scaleByPage).length === 0) { scaleByPage[1] = json.pixelsPerMeter; lastKnownScale = json.pixelsPerMeter; }
                     measurementsByPage = {}; const promises = [];
                     for (let page in json.measurementsByPage) {
                         measurementsByPage[page] = [];
-                        json.measurementsByPage[page].forEach(m => {
-                            if ((m.type === 'autoArea' || m.type === 'autoLine') && m.imgSrc) { const prom = new Promise((resolve) => { const newImg = new Image(); newImg.onload = () => { m.img = newImg; measurementsByPage[page].push(m); resolve(); }; newImg.src = m.imgSrc; }); promises.push(prom); } else measurementsByPage[page].push(m);
-                        });
+                        json.measurementsByPage[page].forEach(m => { if ((m.type === 'autoArea' || m.type === 'autoLine') && m.imgSrc) { const prom = new Promise((resolve) => { const newImg = new Image(); newImg.onload = () => { m.img = newImg; measurementsByPage[page].push(m); resolve(); }; newImg.src = m.imgSrc; }); promises.push(prom); } else measurementsByPage[page].push(m); });
                     } Promise.all(promises).then(() => { pageNum = 1; loadDocumentFromDataURL(true); }); 
                 } catch(err) { cAlert("Error al leer archivo."); }
             }; reader.readAsText(file); e.target.value = "";
@@ -490,13 +388,8 @@
         document.querySelectorAll('.tool-trigger').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const selectedMode = e.currentTarget.getAttribute('data-mode');
-                
-                if (['distance', 'dimension', 'polygonal', 'area', 'circle', 'arc', 'autoLine', 'autoArea'].includes(selectedMode)) { 
-                    if (!scaleByPage[pageNum]) { cAlert("¡Calibra la escala en esta página primero!"); return; }
-                } 
-                if (['autoLine', 'autoArea'].includes(selectedMode) && !cvReady) {
-                    cAlert("El motor de IA (OpenCV) aún se está cargando. Espera unos segundos."); return;
-                }
+                if (['distance', 'dimension', 'polygonal', 'area', 'circle', 'arc', 'autoLine', 'autoArea'].includes(selectedMode)) { if (!scaleByPage[pageNum]) { cAlert("¡Calibra la escala en esta página primero!"); return; } } 
+                if (['autoLine', 'autoArea'].includes(selectedMode) && !cvReady) { cAlert("El motor de IA (OpenCV) aún se está cargando. Espera unos segundos."); return; }
                 setMode(selectedMode);
             });
         });
@@ -504,86 +397,31 @@
         function setMode(newMode) {
             mode = newMode; 
             document.querySelectorAll('.tool-trigger').forEach(btn => btn.classList.remove('active'));
-            if(mode !== 'none') {
-                document.querySelectorAll(`.tool-trigger[data-mode="${mode}"]`).forEach(btn => {
-                    btn.classList.add('active');
-                    if(['arc', 'circle', 'dimension', 'printArea'].includes(mode)) { btn.style.borderColor = 'transparent'; btn.style.color = 'white'; }
-                });
-            }
-            
+            if(mode !== 'none') { document.querySelectorAll(`.tool-trigger[data-mode="${mode}"]`).forEach(btn => { btn.classList.add('active'); if(['arc', 'circle', 'dimension', 'printArea'].includes(mode)) { btn.style.borderColor = 'transparent'; btn.style.color = 'white'; } }); }
             document.querySelectorAll(`.tool-trigger[data-mode="circle"]:not(.active)`).forEach(b => { b.style.color = 'var(--circle)'; b.style.borderColor = 'transparent'; });
             document.querySelectorAll(`.tool-trigger[data-mode="arc"]:not(.active)`).forEach(b => { b.style.color = 'var(--curve)'; b.style.borderColor = 'transparent'; });
             document.querySelectorAll(`.tool-trigger[data-mode="dimension"]:not(.active)`).forEach(b => { b.style.color = '#94a3b8'; b.style.borderColor = 'transparent'; });
             document.querySelectorAll(`.tool-trigger[data-mode="printArea"]:not(.active)`).forEach(b => { b.style.color = 'var(--text-main)'; b.style.borderColor = 'transparent'; });
 
             canvas.style.cursor = (mode === 'select' || mode === 'pan') ? 'grab' : 'crosshair';
-            const msgs = { 
-                'select': "Selecciona una medida para editarla, o arrastra el fondo para moverte.",
-                'pan': "Modo Mano: Arrastra para moverte.", 
-                'calibrate': `Calibración: 1º Clic (Inicio) -> 2º Clic (Fin).`, 
-                'distance': "Línea Recta: 1º Clic (Inicio) -> 2º Clic (Fin).", 
-                'dimension': "Acotación CAD: 1º Clic (Inicio) -> 2º (Fin) -> 3º (Fijar cota).",
-                'polygonal': "Línea Poligonal: Clics para fijar puntos. Clic derecho = terminar.", 
-                'area': "Medir Área: Clic para esquinas. Clic derecho = cerrar.", 
-                'circle': "Círculo: 1º Clic (Borde) -> 2º Clic -> 3º Clic.",
-                'arc': "Arco curvo: 1º Clic (Inicio) -> 2º Clic (Fin) -> 3º Clic (Curva).",
-                'autoLine': "Auto-Línea (OpenCV): Haz clic sobre la línea en el plano.", 
-                'autoArea': "Auto-Área (OpenCV): Haz clic sobre el tramado en el plano.",
-                'printArea': "Imprimir Área: Haz clic y arrastra para seleccionar el recorte."
-            };
+            const msgs = { 'select': "Selecciona una medida para editarla, o arrastra el fondo para moverte.", 'pan': "Modo Mano: Arrastra para moverte.", 'calibrate': `Calibración: 1º Clic (Inicio) -> 2º Clic (Fin).`, 'distance': "Línea Recta: 1º Clic (Inicio) -> 2º Clic (Fin).", 'dimension': "Acotación CAD: 1º Clic (Inicio) -> 2º (Fin) -> 3º (Fijar cota).", 'polygonal': "Línea Poligonal: Clics para fijar puntos. Clic derecho = terminar.", 'area': "Medir Área: Clic para esquinas. Clic derecho = cerrar.", 'circle': "Círculo: 1º Clic (Borde) -> 2º Clic -> 3º Clic.", 'arc': "Arco curvo: 1º Clic (Inicio) -> 2º Clic (Fin) -> 3º Clic (Curva).", 'autoLine': "Auto-Línea (OpenCV): Haz clic sobre la línea en el plano.", 'autoArea': "Auto-Área (OpenCV): Haz clic sobre el tramado en el plano.", 'printArea': "Imprimir Área: Haz clic y arrastra para seleccionar el recorte." };
             if(msgs[mode]) document.getElementById('statusText').innerText = msgs[mode];
-            
-            isDrawing = false; measureStep = 0; currentPath = []; tempPoint = null; 
-            if (mode !== 'select') editingMeasureId = null; 
-            redraw(); loupeCanvas.style.display = 'none';
+            isDrawing = false; measureStep = 0; currentPath = []; tempPoint = null; if (mode !== 'select') editingMeasureId = null; redraw(); loupeCanvas.style.display = 'none';
         }
 
         function recalculateMeasurement(m, currScale) {
             if (!currScale) return;
-            if (m.type === 'straight') {
-                let dist = Math.hypot(m.points[1].x - m.points[0].x, m.points[1].y - m.points[0].y);
-                m.valM = (dist / currScale).toFixed(2); m.cx = (m.points[0].x + m.points[1].x)/2; m.cy = (m.points[0].y + m.points[1].y)/2;
-            } 
-            else if (m.type === 'dimension') {
-                let dist = Math.hypot(m.points[1].x - m.points[0].x, m.points[1].y - m.points[0].y); m.valM = (dist / currScale).toFixed(2);
-                let cad = getCADOffset(m.points[0], m.points[1], m.points[2]);
-                m.cx = (m.points[0].x + m.points[1].x)/2 + cad.d * cad.nx; m.cy = (m.points[0].y + m.points[1].y)/2 + cad.d * cad.ny;
-            }
-            else if (m.type === 'polygonal') {
-                let t = 0; for(let i=1; i<m.points.length; i++) t += Math.hypot(m.points[i].x - m.points[i-1].x, m.points[i].y - m.points[i-1].y);
-                m.valM = (t / currScale).toFixed(2); m.cx = m.points[m.points.length-1].x; m.cy = m.points[m.points.length-1].y;
-            }
-            else if (m.type === 'area') {
-                let per = 0, ar = 0, n = m.points.length, cX = 0, cY = 0;
-                for(let i=0; i<n; i++) { let p1 = m.points[i], p2 = m.points[(i+1)%n]; per += Math.hypot(p2.x - p1.x, p2.y - p1.y); ar += (p1.x * p2.y - p2.x * p1.y); cX += p1.x; cY += p1.y; }
-                m.valM = (per / currScale).toFixed(2); m.valM2 = (Math.abs(ar)/2/(currScale*currScale)).toFixed(2); m.cx = cX / n; m.cy = cY / n;
-            }
-            else if (m.type === 'circle' || m.type === 'arc') {
-                let geom = getArcThrough3Points(m.points[0], m.points[2], m.points[1]);
-                if (geom) {
-                    let rM = geom.r / currScale; m.radiusM = rM.toFixed(2);
-                    if (m.type === 'circle') { m.valM = (2 * Math.PI * rM).toFixed(2); m.valM2 = (Math.PI * rM * rM).toFixed(2); m.cx = geom.cx; m.cy = geom.cy; m.r = geom.r;
-                    } else { m.valM = (geom.length / currScale).toFixed(2); m.cx = m.points[2].x; m.cy = m.points[2].y; }
-                } else {
-                    let dist = Math.hypot(m.points[1].x - m.points[0].x, m.points[1].y - m.points[0].y); m.valM = (dist / currScale).toFixed(2); m.radiusM = "0.00";
-                }
-            }
+            if (m.type === 'straight') { let dist = Math.hypot(m.points[1].x - m.points[0].x, m.points[1].y - m.points[0].y); m.valM = (dist / currScale).toFixed(2); m.cx = (m.points[0].x + m.points[1].x)/2; m.cy = (m.points[0].y + m.points[1].y)/2; } 
+            else if (m.type === 'dimension') { let dist = Math.hypot(m.points[1].x - m.points[0].x, m.points[1].y - m.points[0].y); m.valM = (dist / currScale).toFixed(2); let cad = getCADOffset(m.points[0], m.points[1], m.points[2]); m.cx = (m.points[0].x + m.points[1].x)/2 + cad.d * cad.nx; m.cy = (m.points[0].y + m.points[1].y)/2 + cad.d * cad.ny; }
+            else if (m.type === 'polygonal') { let t = 0; for(let i=1; i<m.points.length; i++) t += Math.hypot(m.points[i].x - m.points[i-1].x, m.points[i].y - m.points[i-1].y); m.valM = (t / currScale).toFixed(2); m.cx = m.points[m.points.length-1].x; m.cy = m.points[m.points.length-1].y; }
+            else if (m.type === 'area') { let per = 0, ar = 0, n = m.points.length, cX = 0, cY = 0; for(let i=0; i<n; i++) { let p1 = m.points[i], p2 = m.points[(i+1)%n]; per += Math.hypot(p2.x - p1.x, p2.y - p1.y); ar += (p1.x * p2.y - p2.x * p1.y); cX += p1.x; cY += p1.y; } m.valM = (per / currScale).toFixed(2); m.valM2 = (Math.abs(ar)/2/(currScale*currScale)).toFixed(2); m.cx = cX / n; m.cy = cY / n; }
+            else if (m.type === 'circle' || m.type === 'arc') { let geom = getArcThrough3Points(m.points[0], m.points[2], m.points[1]); if (geom) { let rM = geom.r / currScale; m.radiusM = rM.toFixed(2); if (m.type === 'circle') { m.valM = (2 * Math.PI * rM).toFixed(2); m.valM2 = (Math.PI * rM * rM).toFixed(2); m.cx = geom.cx; m.cy = geom.cy; m.r = geom.r; } else { m.valM = (geom.length / currScale).toFixed(2); m.cx = m.points[2].x; m.cy = m.points[2].y; } } else { let dist = Math.hypot(m.points[1].x - m.points[0].x, m.points[1].y - m.points[0].y); m.valM = (dist / currScale).toFixed(2); m.radiusM = "0.00"; } }
         }
 
         function addMeasurement(data) {
-            if (!measurementsByPage[pageNum]) measurementsByPage[pageNum] = [];
-            data.id = Date.now().toString() + Math.floor(Math.random()*1000); 
-            data.lblOffset = { x: 0, y: -30 }; data.color = getDefaultColor(data.type);
-            
-            let namePrefix = "Medida";
-            if (data.type === 'area' || data.type === 'autoArea') namePrefix = `Área ${counters.area++}`;
-            else if (data.type === 'circle') namePrefix = `Círculo ${counters.circle++}`;
-            else if (data.type === 'arc') namePrefix = `Curva ${counters.arc++}`;
-            else if (data.type === 'dimension') namePrefix = `Cota ${counters.dimension++}`;
-            else namePrefix = `Línea ${counters.line++}`;
-            
-            data.name = data.name || namePrefix; measurementsByPage[pageNum].push(data); 
-            editingMeasureId = data.id; if(mode !== 'select') setMode('select'); else { updateSidebar(); redraw(); }
+            if (!measurementsByPage[pageNum]) measurementsByPage[pageNum] = []; data.id = Date.now().toString() + Math.floor(Math.random()*1000); data.lblOffset = { x: 0, y: -30 }; data.color = getDefaultColor(data.type);
+            let namePrefix = "Medida"; if (data.type === 'area' || data.type === 'autoArea') namePrefix = `Área ${counters.area++}`; else if (data.type === 'circle') namePrefix = `Círculo ${counters.circle++}`; else if (data.type === 'arc') namePrefix = `Curva ${counters.arc++}`; else if (data.type === 'dimension') namePrefix = `Cota ${counters.dimension++}`; else namePrefix = `Línea ${counters.line++}`;
+            data.name = data.name || namePrefix; measurementsByPage[pageNum].push(data); editingMeasureId = data.id; if(mode !== 'select') setMode('select'); else { updateSidebar(); redraw(); }
         }
         function deleteMeasurement(id) { if (measurementsByPage[pageNum]) { measurementsByPage[pageNum] = measurementsByPage[pageNum].filter(m => m.id !== id); if(editingMeasureId === id) editingMeasureId = null; updateSidebar(); redraw(); } }
         window.updateMeasurementName = function(id, newName) { const m = measurementsByPage[pageNum].find(x => x.id === id); if (m) { m.name = newName || "Sin Nombre"; redraw(); } }
@@ -592,39 +430,21 @@
         window.clearHighlight = function() { highlightedMeasureId = null; redraw(); }
 
         function updateSidebar() {
-            measurementListEl.innerHTML = ''; const list = measurementsByPage[pageNum] || [];
-            if (list.length === 0) { measurementListEl.innerHTML = '<div class="empty-state">Aún no has medido nada.</div>'; return; }
+            measurementListEl.innerHTML = ''; const list = measurementsByPage[pageNum] || []; if (list.length === 0) { measurementListEl.innerHTML = '<div class="empty-state">Aún no has medido nada.</div>'; return; }
             list.forEach(m => {
-                const item = document.createElement('div'); 
-                item.className = `measure-item type-${m.type.toLowerCase()} ${m.id === editingMeasureId ? 'selected' : ''}`; item.style.borderLeftColor = m.color;
-                item.onmouseenter = () => { item.classList.add('highlighted'); highlightMeasurement(m.id); };
-                item.onmouseleave = () => { item.classList.remove('highlighted'); clearHighlight(); };
+                const item = document.createElement('div'); item.className = `measure-item type-${m.type.toLowerCase()} ${m.id === editingMeasureId ? 'selected' : ''}`; item.style.borderLeftColor = m.color;
+                item.onmouseenter = () => { item.classList.add('highlighted'); highlightMeasurement(m.id); }; item.onmouseleave = () => { item.classList.remove('highlighted'); clearHighlight(); };
                 item.onclick = (ev) => { if(ev.target.tagName !== 'INPUT' && ev.target.tagName !== 'BUTTON') { editingMeasureId = m.id; if(mode !== 'select') setMode('select'); else { updateSidebar(); redraw(); } } };
-                
-                let valStr = "";
-                if (['straight', 'polygonal', 'autoLine', 'dimension'].includes(m.type)) { valStr = `<span>${m.valM}</span>&nbsp;m`; } 
-                else if (m.type === 'arc' || m.type === 'circle') { valStr = `<span>${m.type==='arc'? m.valM : m.valM2}</span>&nbsp;${m.type==='arc'?'m':'m²'}`; } 
-                else { valStr = `<span>${m.valM2}</span>&nbsp;m²`; }
-                
-                item.innerHTML = `
-                    <input type="color" class="color-picker" value="${m.color}" onchange="updateMeasurementColor('${m.id}', this.value)" title="Color">
-                    <input type="text" class="measure-name" value="${m.name}" onchange="updateMeasurementName('${m.id}', this.value)" onkeyup="if(event.key === 'Enter') this.blur();">
-                    <div class="measure-values">${valStr}</div>
-                    <button class="btn-delete" onclick="deleteMeasurement('${m.id}')" title="Borrar">✖</button>
-                `;
+                let valStr = ""; if (['straight', 'polygonal', 'autoLine', 'dimension'].includes(m.type)) { valStr = `<span>${m.valM}</span>&nbsp;m`; } else if (m.type === 'arc' || m.type === 'circle') { valStr = `<span>${m.type==='arc'? m.valM : m.valM2}</span>&nbsp;${m.type==='arc'?'m':'m²'}`; } else { valStr = `<span>${m.valM2}</span>&nbsp;m²`; }
+                item.innerHTML = ` <input type="color" class="color-picker" value="${m.color}" onchange="updateMeasurementColor('${m.id}', this.value)" title="Color"> <input type="text" class="measure-name" value="${m.name}" onchange="updateMeasurementName('${m.id}', this.value)" onkeyup="if(event.key === 'Enter') this.blur();"> <div class="measure-values">${valStr}</div> <button class="btn-delete" onclick="deleteMeasurement('${m.id}')" title="Borrar">✖</button> `;
                 measurementListEl.appendChild(item);
             });
         }
         
         document.getElementById('btnExport').onclick = () => {
             const list = measurementsByPage[pageNum] || []; if (list.length === 0) return cAlert("No hay datos que exportar.");
-            let csv = "\uFEFFHoja;Nombre;Tipo;Longitud/Perímetro (m);Área (m²);Radio (m)\n"; let pageLabel = pdfDoc ? `Página ${pageNum}` : "Imagen Única";
-            const typeTranslations = { 'straight': 'Línea Recta', 'dimension': 'Acotación CAD', 'polygonal': 'Línea Poligonal', 'area': 'Área Manual', 'circle': 'Círculo', 'arc': 'Arco', 'autoLine': 'Auto-Línea', 'autoArea': 'Auto-Área' };
-            list.forEach(m => { 
-                let tipo = typeTranslations[m.type] || m.type; let longitud = (m.valM && m.valM !== "N/A") ? m.valM.toString().replace('.',',') : "-";
-                let area = m.valM2 ? m.valM2.toString().replace('.',',') : "-"; let radio = m.radiusM ? m.radiusM.toString().replace('.',',') : "-";
-                csv += `${pageLabel};"${m.name}";${tipo};${longitud};${area};${radio}\n`; 
-            });
+            let csv = "\uFEFFHoja;Nombre;Tipo;Longitud/Perímetro (m);Área (m²);Radio (m)\n"; let pageLabel = pdfDoc ? `Página ${pageNum}` : "Imagen Única"; const typeTranslations = { 'straight': 'Línea Recta', 'dimension': 'Acotación CAD', 'polygonal': 'Línea Poligonal', 'area': 'Área Manual', 'circle': 'Círculo', 'arc': 'Arco', 'autoLine': 'Auto-Línea', 'autoArea': 'Auto-Área' };
+            list.forEach(m => { let tipo = typeTranslations[m.type] || m.type; let longitud = (m.valM && m.valM !== "N/A") ? m.valM.toString().replace('.',',') : "-"; let area = m.valM2 ? m.valM2.toString().replace('.',',') : "-"; let radio = m.radiusM ? m.radiusM.toString().replace('.',',') : "-"; csv += `${pageLabel};"${m.name}";${tipo};${longitud};${area};${radio}\n`; });
             const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' })); link.download = `Mediciones_${pageLabel.replace(' ', '_')}.csv`; document.body.appendChild(link); link.click(); document.body.removeChild(link);
         };
 
@@ -632,112 +452,65 @@
             document.getElementById('statusText').innerText = "🧠 Procesando topología y sombreados con OpenCV...";
             setTimeout(() => {
                 try {
-                    let src = cv.imread(canvas);
-                    let ctxData = ctx.getImageData(startX, startY, 1, 1).data; let r = ctxData[0], g = ctxData[1], b = ctxData[2];
-                    
-                    let tolerancia = 60; 
-                    let low = new cv.Mat(src.rows, src.cols, src.type(), [Math.max(0, r - tolerancia), Math.max(0, g - tolerancia), Math.max(0, b - tolerancia), 0]);
-                    let high = new cv.Mat(src.rows, src.cols, src.type(), [Math.min(255, r + tolerancia), Math.min(255, g + tolerancia), Math.min(255, b + tolerancia), 255]);
-                    
+                    let src = cv.imread(canvas); let ctxData = ctx.getImageData(startX, startY, 1, 1).data; let r = ctxData[0], g = ctxData[1], b = ctxData[2];
+                    let tolerancia = 60; let low = new cv.Mat(src.rows, src.cols, src.type(), [Math.max(0, r - tolerancia), Math.max(0, g - tolerancia), Math.max(0, b - tolerancia), 0]); let high = new cv.Mat(src.rows, src.cols, src.type(), [Math.min(255, r + tolerancia), Math.min(255, g + tolerancia), Math.min(255, b + tolerancia), 255]);
                     let mask = new cv.Mat(); cv.inRange(src, low, high, mask);
                     
                     if (autoMode === 'autoArea') {
-                        let M = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(15, 15));
-                        cv.morphologyEx(mask, mask, cv.MORPH_CLOSE, M);
-                        
-                        let contours = new cv.MatVector(); let hierarchy = new cv.Mat();
-                        cv.findContours(mask, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+                        let M = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(15, 15)); cv.morphologyEx(mask, mask, cv.MORPH_CLOSE, M);
+                        let contours = new cv.MatVector(); let hierarchy = new cv.Mat(); cv.findContours(mask, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
                         if (contours.size() === 0) throw new Error("Vacio");
-                        
-                        let maxArea = 0; let maxCnt = null;
-                        for (let i = 0; i < contours.size(); ++i) { let cnt = contours.get(i); let area = cv.contourArea(cnt); if (area > maxArea) { maxArea = area; maxCnt = cnt; } }
-                        
-                        let approx = new cv.Mat(); let epsilon = 0.002 * cv.arcLength(maxCnt, true);
-                        cv.approxPolyDP(maxCnt, approx, epsilon, true);
-                        
-                        let pts = []; let cx = 0, cy = 0;
-                        for (let i = 0; i < approx.rows; i++) { let px = approx.data32S[i * 2], py = approx.data32S[i * 2 + 1]; pts.push({x: px, y: py}); cx += px; cy += py; }
-                        cx /= pts.length; cy /= pts.length;
-                        
-                        let currScale = scaleByPage[pageNum] || 1;
-                        let overlay = cv.Mat.zeros(src.rows, src.cols, cv.CV_8UC4); let color = new cv.Scalar(16, 185, 129, 150); 
-                        let drawCnts = new cv.MatVector(); drawCnts.push(approx);
-                        cv.drawContours(overlay, drawCnts, 0, color, -1, cv.LINE_8, hierarchy, 0);
-                        
-                        let tempCanvas = document.createElement('canvas'); cv.imshow(tempCanvas, overlay); let resImg = new Image();
-                        resImg.onload = () => { addMeasurement({ type: 'autoArea', img: resImg, cx, cy, points: pts, valM2: (maxArea / (currScale * currScale)).toFixed(2), valM: (cv.arcLength(maxCnt, true) / currScale).toFixed(2) }); };
-                        resImg.src = tempCanvas.toDataURL();
-                        
+                        let maxArea = 0; let maxCnt = null; for (let i = 0; i < contours.size(); ++i) { let cnt = contours.get(i); let area = cv.contourArea(cnt); if (area > maxArea) { maxArea = area; maxCnt = cnt; } }
+                        let approx = new cv.Mat(); let epsilon = 0.002 * cv.arcLength(maxCnt, true); cv.approxPolyDP(maxCnt, approx, epsilon, true);
+                        let pts = []; let cx = 0, cy = 0; for (let i = 0; i < approx.rows; i++) { let px = approx.data32S[i * 2], py = approx.data32S[i * 2 + 1]; pts.push({x: px, y: py}); cx += px; cy += py; } cx /= pts.length; cy /= pts.length;
+                        let currScale = scaleByPage[pageNum] || 1; let overlay = cv.Mat.zeros(src.rows, src.cols, cv.CV_8UC4); let color = new cv.Scalar(16, 185, 129, 150); let drawCnts = new cv.MatVector(); drawCnts.push(approx); cv.drawContours(overlay, drawCnts, 0, color, -1, cv.LINE_8, hierarchy, 0);
+                        let tempCanvas = document.createElement('canvas'); cv.imshow(tempCanvas, overlay); let resImg = new Image(); resImg.onload = () => { addMeasurement({ type: 'autoArea', img: resImg, cx, cy, points: pts, valM2: (maxArea / (currScale * currScale)).toFixed(2), valM: (cv.arcLength(maxCnt, true) / currScale).toFixed(2) }); }; resImg.src = tempCanvas.toDataURL();
                         M.delete(); contours.delete(); hierarchy.delete(); approx.delete(); drawCnts.delete(); overlay.delete();
-                    }
-                    else if (autoMode === 'autoLine') {
-                        let contours = new cv.MatVector(); let hierarchy = new cv.Mat();
-                        cv.findContours(mask, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+                    } else if (autoMode === 'autoLine') {
+                        let contours = new cv.MatVector(); let hierarchy = new cv.Mat(); cv.findContours(mask, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
                         if (contours.size() === 0) throw new Error("Vacio");
-                        
-                        let maxLen = 0; let maxCnt = null;
-                        for (let i = 0; i < contours.size(); ++i) { let cnt = contours.get(i); let len = cv.arcLength(cnt, true) / 2; if (len > maxLen) { maxLen = len; maxCnt = cnt; } }
-                        
-                        let overlay = cv.Mat.zeros(src.rows, src.cols, cv.CV_8UC4); let color = new cv.Scalar(168, 85, 247, 255); 
-                        let drawCnts = new cv.MatVector(); drawCnts.push(maxCnt);
-                        cv.drawContours(overlay, drawCnts, 0, color, 3, cv.LINE_8, hierarchy, 0);
-                        
-                        let M = cv.moments(maxCnt); let cx = M.m10 / M.m00, cy = M.m01 / M.m00;
-                        let tempCanvas = document.createElement('canvas'); cv.imshow(tempCanvas, overlay); let resImg = new Image();
-                        resImg.onload = () => { addMeasurement({ type: 'autoLine', img: resImg, cx, cy, valM: (maxLen / (scaleByPage[pageNum] || 1)).toFixed(2), valM2: null }); };
-                        resImg.src = tempCanvas.toDataURL();
-                        
+                        let maxLen = 0; let maxCnt = null; for (let i = 0; i < contours.size(); ++i) { let cnt = contours.get(i); let len = cv.arcLength(cnt, true) / 2; if (len > maxLen) { maxLen = len; maxCnt = cnt; } }
+                        let overlay = cv.Mat.zeros(src.rows, src.cols, cv.CV_8UC4); let color = new cv.Scalar(168, 85, 247, 255); let drawCnts = new cv.MatVector(); drawCnts.push(maxCnt); cv.drawContours(overlay, drawCnts, 0, color, 3, cv.LINE_8, hierarchy, 0);
+                        let M = cv.moments(maxCnt); let cx = M.m10 / M.m00, cy = M.m01 / M.m00; let tempCanvas = document.createElement('canvas'); cv.imshow(tempCanvas, overlay); let resImg = new Image(); resImg.onload = () => { addMeasurement({ type: 'autoLine', img: resImg, cx, cy, valM: (maxLen / (scaleByPage[pageNum] || 1)).toFixed(2), valM2: null }); }; resImg.src = tempCanvas.toDataURL();
                         contours.delete(); hierarchy.delete(); drawCnts.delete(); overlay.delete();
                     }
-                    
-                    src.delete(); low.delete(); high.delete(); mask.delete();
-                    document.getElementById('statusText').innerText = "✅ Operación con OpenCV completada.";
-                } catch(err) {
-                    cAlert("No se pudo detectar el patrón correctamente. Asegúrate de hacer clic en una zona definida.");
-                    document.getElementById('statusText').innerText = "Selecciona una herramienta para continuar.";
-                    setMode('select');
-                }
+                    src.delete(); low.delete(); high.delete(); mask.delete(); document.getElementById('statusText').innerText = "✅ Operación completada.";
+                } catch(err) { cAlert("No se pudo detectar el patrón correctamente. Haz clic en una zona definida."); setMode('select'); }
             }, 50); 
         }
 
-        // --- MANEJO DEL RATÓN CON LUPA INTELIGENTE Y DIBUJO ---
+        function getLabelAtPos(x, y) {
+            const list = measurementsByPage[pageNum] || [];
+            for (let i = list.length - 1; i >= 0; i--) {
+                const m = list[i]; if (!m.lblOffset) continue;
+                const rx = m.cx + m.lblOffset.x, ry = m.cy + m.lblOffset.y; const boxHeight = (m.type === 'straight' || m.type === 'dimension' || m.type === 'polygonal' || m.type === 'autoLine' || m.type === 'arc') ? 18 : 32;
+                if (x >= rx - 50 && x <= rx + 50 && y >= ry - 14 && y <= ry - 14 + boxHeight) return m;
+            } return null;
+        }
+
+        function getPointAtPos(m, x, y) { if (!m.points) return -1; for (let i = 0; i < m.points.length; i++) { if (Math.hypot(x - m.points[i].x, y - m.points[i].y) < 15) return i; } return -1; }
+
         canvas.addEventListener('contextmenu', (e) => { 
             e.preventDefault(); 
-            if (['polygonal', 'area'].includes(mode) && currentPath.length > 0) {
-                if (measureStep >= 1) { finishPolyArea(); }
-            } else { isDrawing = false; measureStep = 0; currentPath = []; tempPoint = null; redraw(); }
+            if (['polygonal', 'area'].includes(mode) && currentPath.length > 0) { if (measureStep >= 1) { finishPolyArea(); } } 
+            else { isDrawing = false; measureStep = 0; currentPath = []; tempPoint = null; redraw(); }
         });
         
-        document.addEventListener('keydown', (e) => { 
-            if (e.key === 'Escape') { isDrawing = false; measureStep = 0; currentPath = []; tempPoint = null; redraw(); } 
-        });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { isDrawing = false; measureStep = 0; currentPath = []; tempPoint = null; redraw(); } });
 
         canvas.addEventListener('mousemove', (e) => {
             const {x, y} = getMousePos(e);
-            
-            // La Lupa se muestra automáticamente al pasar el ratón si estamos en una herramienta de medir o arrastrando un nodo
-            const measureModes = ['calibrate', 'distance', 'dimension', 'polygonal', 'area', 'circle', 'arc', 'autoLine', 'autoArea'];
-            if (measureModes.includes(mode) || draggingPointIndex !== -1) {
-                updateLoupe(e, x, y);
-            } else {
-                loupeCanvas.style.display = 'none';
-            }
-
+            if (['calibrate', 'distance', 'dimension', 'polygonal', 'area', 'circle', 'arc', 'autoLine', 'autoArea'].includes(mode) || draggingPointIndex !== -1) { updateLoupe(e, x, y); } else { loupeCanvas.style.display = 'none'; }
             if (mode === 'select') {
-                if (draggingPointIndex !== -1 && editingMeasureId) {
-                    const m = measurementsByPage[pageNum].find(val => val.id === editingMeasureId);
-                    if (m) { m.points[draggingPointIndex] = {x, y}; recalculateMeasurement(m, scaleByPage[pageNum]); updateSidebar(); redraw(); }
-                }
+                if (draggingPointIndex !== -1 && editingMeasureId) { const m = measurementsByPage[pageNum].find(val => val.id === editingMeasureId); if (m) { m.points[draggingPointIndex] = {x, y}; recalculateMeasurement(m, scaleByPage[pageNum]); updateSidebar(); redraw(); } }
                 else if (draggingLabel) { draggingLabel.lblOffset.x = x - draggingLabel.cx - dragOffsetX; draggingLabel.lblOffset.y = y - draggingLabel.cy - dragOffsetY; redraw(); }
                 else if (isPanning) { canvasContainer.scrollLeft = panScrollLeft - (e.clientX - panStartX); canvasContainer.scrollTop = panScrollTop - (e.clientY - panStartY); }
                 else { if (getLabelAtPos(x, y)) canvas.style.cursor = 'move'; else canvas.style.cursor = 'default'; }
                 return;
             }
-            
             if (mode === 'pan' && isPanning) { canvasContainer.scrollLeft = panScrollLeft - (e.clientX - panStartX); canvasContainer.scrollTop = panScrollTop - (e.clientY - panStartY); return; }
             if (mode === 'printArea' && isDrawing) { endX = x; endY = y; redraw(); ctx.strokeStyle = '#0ea5e9'; ctx.lineWidth = 2; ctx.setLineDash([6, 6]); ctx.strokeRect(startX, startY, endX - startX, endY - startY); ctx.fillStyle = 'rgba(14, 165, 233, 0.15)'; ctx.fillRect(startX, startY, endX - startX, endY - startY); ctx.setLineDash([]); return; }
             if (isDrawing && ['calibrate', 'distance', 'polygonal', 'area', 'arc', 'circle', 'dimension'].includes(mode)) { tempPoint = {x, y}; redraw(); }
-
             if (!isDrawing && !isPanning && !draggingLabel) { canvas.style.cursor = (mode === 'pan' || mode === 'printArea') ? 'crosshair' : 'crosshair'; }
         });
 
@@ -745,14 +518,9 @@
             if (mode === 'none' || canvas.width === 0) return; const {x, y} = getMousePos(e);
             
             if (mode === 'select') {
-                if (editingMeasureId) {
-                    const m = (measurementsByPage[pageNum] || []).find(val => val.id === editingMeasureId);
-                    if (m && m.type !== 'autoArea' && m.type !== 'autoLine') { const ptIdx = getPointAtPos(m, x, y); if (ptIdx !== -1) { draggingPointIndex = ptIdx; canvas.style.cursor = 'grabbing'; return; } }
-                }
-                const clickedLabel = getLabelAtPos(x, y);
-                if (clickedLabel) { editingMeasureId = clickedLabel.id; updateSidebar(); draggingLabel = clickedLabel; dragOffsetX = x - (clickedLabel.cx + clickedLabel.lblOffset.x); dragOffsetY = y - (clickedLabel.cy + clickedLabel.lblOffset.y); canvas.style.cursor = 'move'; redraw(); return; }
-                editingMeasureId = null; updateSidebar(); redraw();
-                isPanning = true; panStartX = e.clientX; panStartY = e.clientY; panScrollLeft = canvasContainer.scrollLeft; panScrollTop = canvasContainer.scrollTop; canvas.style.cursor = 'grabbing'; return;
+                if (editingMeasureId) { const m = (measurementsByPage[pageNum] || []).find(val => val.id === editingMeasureId); if (m && m.type !== 'autoArea' && m.type !== 'autoLine') { const ptIdx = getPointAtPos(m, x, y); if (ptIdx !== -1) { draggingPointIndex = ptIdx; canvas.style.cursor = 'grabbing'; return; } } }
+                const clickedLabel = getLabelAtPos(x, y); if (clickedLabel) { editingMeasureId = clickedLabel.id; updateSidebar(); draggingLabel = clickedLabel; dragOffsetX = x - (clickedLabel.cx + clickedLabel.lblOffset.x); dragOffsetY = y - (clickedLabel.cy + clickedLabel.lblOffset.y); canvas.style.cursor = 'move'; redraw(); return; }
+                editingMeasureId = null; updateSidebar(); redraw(); isPanning = true; panStartX = e.clientX; panStartY = e.clientY; panScrollLeft = canvasContainer.scrollLeft; panScrollTop = canvasContainer.scrollTop; canvas.style.cursor = 'grabbing'; return;
             }
 
             if (mode === 'printArea') { startX = x; startY = y; isDrawing = true; return; }
@@ -761,19 +529,14 @@
 
             if (['autoLine', 'autoArea'].includes(mode)) { executeAutoMeasurement(x, y, mode); return; }
 
-            // Lógica Directa: 1er Clic fija el punto de inicio
             if (['calibrate', 'distance', 'polygonal', 'area', 'arc', 'circle', 'dimension'].includes(mode)) {
-                if (measureStep === 0) {
-                    startX = x; startY = y; currentPath = [{x, y}]; isDrawing = true; measureStep = 1;
-                }
+                if (measureStep === 0) { startX = x; startY = y; currentPath = [{x, y}]; isDrawing = true; measureStep = 1; }
                 else if (measureStep === 1) {
                     if (['calibrate', 'distance'].includes(mode)) { endX = x; endY = y; currentPath.push({x, y}); finishLineTool(); } 
                     else if (['dimension', 'arc', 'circle'].includes(mode)) { currentPath.push({x, y}); measureStep = 2; }
                     else if (['polygonal', 'area'].includes(mode)) { const lastP = currentPath[currentPath.length - 1]; if (Math.hypot(x - lastP.x, y - lastP.y) > 5) currentPath.push({x, y}); }
                 }
-                else if (measureStep === 2) {
-                    if (['dimension', 'arc', 'circle'].includes(mode)) { currentPath.push({x, y}); finish3PointTool(); }
-                }
+                else if (measureStep === 2) { if (['dimension', 'arc', 'circle'].includes(mode)) { currentPath.push({x, y}); finish3PointTool(); } }
             }
         });
 
@@ -781,12 +544,7 @@
             if (draggingPointIndex !== -1) { draggingPointIndex = -1; canvas.style.cursor = 'default'; redraw(); return; }
             if (draggingLabel) { draggingLabel = null; return; }
             if (isPanning) { isPanning = false; canvas.style.cursor = (mode === 'select') ? 'default' : 'grab'; return; }
-            
-            if (mode === 'printArea' && isDrawing) {
-                isDrawing = false; const {x, y} = getMousePos(e); endX = x; endY = y;
-                const rx = Math.min(startX, endX); const ry = Math.min(startY, endY); const rw = Math.abs(endX - startX); const rh = Math.abs(endY - startY);
-                redraw(); if (rw > 10 && rh > 10) printSelectedArea(rx, ry, rw, rh); setMode('select');
-            }
+            if (mode === 'printArea' && isDrawing) { isDrawing = false; const {x, y} = getMousePos(e); endX = x; endY = y; const rx = Math.min(startX, endX); const ry = Math.min(startY, endY); const rw = Math.abs(endX - startX); const rh = Math.abs(endY - startY); redraw(); if (rw > 10 && rh > 10) printSelectedArea(rx, ry, rw, rh); setMode('select'); }
         });
         
         canvas.addEventListener('mouseleave', () => { loupeCanvas.style.display = 'none'; isPanning = false; draggingPointIndex = -1; draggingLabel = null; });
@@ -805,21 +563,15 @@
                             document.getElementById('scaleInfo').innerText = `ESC. PÁG. ${pageNum} (1m = ${Math.round(scaleByPage[pageNum])}px)`; 
                             document.getElementById('scaleInfo').className = "scale-badge calibrated"; 
                             cAlert(`¡Escala guardada!`); setMode('distance'); 
-                        } else {
-                            cAlert("Valor no válido.");
-                        }
+                        } else { cAlert("Valor no válido."); }
                     }
                     currentPath = []; redraw();
                 });
-            } else if (mode === 'distance') {
-                addMeasurement({ type: 'straight', cx: (startX+endX)/2, cy: (startY+endY)/2, points: [...currentPath], valM: (dist/scaleByPage[pageNum]).toFixed(2), valM2: null });
-                currentPath = []; redraw();
-            } 
+            } else if (mode === 'distance') { addMeasurement({ type: 'straight', cx: (startX+endX)/2, cy: (startY+endY)/2, points: [...currentPath], valM: (dist/scaleByPage[pageNum]).toFixed(2), valM2: null }); currentPath = []; redraw(); } 
         }
 
         function finish3PointTool() {
-            isDrawing = false; measureStep = 0; 
-            const currScale = scaleByPage[pageNum];
+            isDrawing = false; measureStep = 0; const currScale = scaleByPage[pageNum];
             if (mode === 'dimension') { let distPx = Math.hypot(currentPath[1].x - currentPath[0].x, currentPath[1].y - currentPath[0].y); let cad = getCADOffset(currentPath[0], currentPath[1], currentPath[2]); addMeasurement({ type: 'dimension', cx: (currentPath[0].x + currentPath[1].x)/2 + cad.d * cad.nx, cy: (currentPath[0].y + currentPath[1].y)/2 + cad.d * cad.ny, points: [...currentPath], valM: (distPx/currScale).toFixed(2), valM2: null }); }
             else if (mode === 'arc') { let arc = getArcThrough3Points(currentPath[0], currentPath[2], currentPath[1]); let lengthPx = arc ? arc.length : Math.hypot(currentPath[1].x - currentPath[0].x, currentPath[1].y - currentPath[0].y); addMeasurement({ type: 'arc', cx: currentPath[2].x, cy: currentPath[2].y, points: [...currentPath], valM: (lengthPx/currScale).toFixed(2), radiusM: (arc ? arc.r/currScale : 0).toFixed(2), valM2: null }); } 
             else if (mode === 'circle') { let circ = getArcThrough3Points(currentPath[0], currentPath[2], currentPath[1]); if (circ) { let rM = circ.r / currScale; addMeasurement({ type: 'circle', cx: circ.cx, cy: circ.cy, r: circ.r, points: [...currentPath], valM: (2 * Math.PI * rM).toFixed(2), valM2: (Math.PI * rM * rM).toFixed(2), radiusM: rM.toFixed(2) }); } }
@@ -875,11 +627,7 @@
 
             sortedList.forEach(m => {
                 const isHigh = (m.id === highlightedMeasureId);
-                if (m.cx === undefined) {
-                    if (m.type === 'straight') { m.cx = (m.points[0].x + m.points[1].x)/2; m.cy = (m.points[0].y + m.points[1].y)/2; }
-                    else if (m.type === 'area') { let cx=0,cy=0; m.points.forEach(p=>{cx+=p.x;cy+=p.y;}); m.cx=cx/m.points.length; m.cy=cy/m.points.length; }
-                    else if (m.type === 'polygonal') { m.cx = m.points[m.points.length-1].x; m.cy = m.points[m.points.length-1].y; }
-                }
+                if (m.cx === undefined) { if (m.type === 'straight') { m.cx = (m.points[0].x + m.points[1].x)/2; m.cy = (m.points[0].y + m.points[1].y)/2; } else if (m.type === 'area') { let cx=0,cy=0; m.points.forEach(p=>{cx+=p.x;cy+=p.y;}); m.cx=cx/m.points.length; m.cy=cy/m.points.length; } else if (m.type === 'polygonal') { m.cx = m.points[m.points.length-1].x; m.cy = m.points[m.points.length-1].y; } }
                 if (!m.lblOffset) m.lblOffset = { x: 0, y: -30 }; let rx = m.cx + m.lblOffset.x, ry = m.cy + m.lblOffset.y;
                 let lbl = m.name + '\n'; lbl += (m.type === 'area' || m.type === 'autoArea' || m.type === 'circle') ? `${m.valM2} m²` : `${m.valM} m`;
                 if (Math.hypot(m.lblOffset.x, m.lblOffset.y) > 25 && m.type !== 'dimension') { ctx.beginPath(); ctx.moveTo(m.cx, m.cy); ctx.lineTo(rx, ry); ctx.strokeStyle = isHigh ? m.color : "rgba(15, 23, 42, 0.4)"; ctx.setLineDash([4,4]); ctx.lineWidth = isHigh ? 2 : 1; ctx.stroke(); ctx.setLineDash([]); }
